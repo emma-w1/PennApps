@@ -12,6 +12,22 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+<<<<<<< HEAD:app/pennapps/Services/FirestoreManager.swift
+=======
+//user data swift data
+struct UserData {
+    let email: String
+    let age: String
+    let skinToneIndex: Int
+    let skinConditions: String
+    let baselineRiskScore: Double?
+    let baselineRiskCategory: String?
+    let finalRiskScore: Double?
+    let finalRiskCategory: String?
+}
+
+//manage firestore
+>>>>>>> origin/main:app/pennapps/FirestoreManager.swift
 class FirestoreManager {
     static let shared = FirestoreManager()
     
@@ -46,7 +62,10 @@ class FirestoreManager {
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
                     skinConditions: data?["skinConditions"] as? String ?? "",
-                    riskScoreBaseline: data?["riskScoreBaseline"] as? Int
+                    baselineRiskScore: data?["baseline_risk_score"] as? Double,
+                    baselineRiskCategory: data?["baseline_risk_category"] as? String,
+                    finalRiskScore: data?["final_risk_score"] as? Double,
+                    finalRiskCategory: data?["final_risk_category"] as? String
                 )
                 completion(userData)
             } else {
@@ -61,32 +80,54 @@ class FirestoreManager {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
         
+        // Calculate risk scores using Python service
+        let riskService = RiskCalculationService.shared
+        let ageInt = Int(age) ?? 0
+        
+        // Calculate baseline risk score (without skin conditions)
+        let baselineResult = riskService.calculateBaselineRiskScore(skinToneIndex: skinToneIndex, age: ageInt)
+        let baselineRiskScore = baselineResult["baseline_risk_score"] as? Double ?? 0.0
+        let baselineRiskCategory = baselineResult["baseline_risk_category"] as? String ?? "Unknown"
+        
+        // Calculate final risk score (with skin conditions)
+        let finalResult = riskService.calculateFinalRiskScore(skinToneIndex: skinToneIndex, age: ageInt, severityScore: severityScore)
+        let finalRiskScore = finalResult["final_risk_score"] as? Double ?? 0.0
+        let finalRiskCategory = finalResult["final_risk_category"] as? String ?? "Unknown"
+        
         let userData: [String: Any] = [
             "email": email,
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
-            "conditionSeverity": severityScore,  
-            "createdAt": FieldValue.serverTimestamp()
+            "conditionSeverity": severityScore,
+            "baseline_risk_score": baselineRiskScore,
+            "baseline_risk_category": baselineRiskCategory,
+            "final_risk_score": finalRiskScore,
+            "final_risk_category": finalRiskCategory,
+            "createdAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
         ]
         
         //prints specific gemini value for skin conditoin severity
-        print("FirestoreManager: Attempting to write to Firestore with Gemini data...")
+        print("FirestoreManager: Attempting to write to Firestore with Gemini data and risk scores...")
+        print("FirestoreManager: Baseline Risk Score: \(baselineRiskScore), Category: \(baselineRiskCategory)")
+        print("FirestoreManager: Final Risk Score: \(finalRiskScore), Category: \(finalRiskCategory)")
+        
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 print("Error writing user document: \(error.localizedDescription)")
             } else {
-                print("User data successfully written to Firestore with severity score: \(severityScore)!")
+                print("User data successfully written to Firestore with severity score: \(severityScore) and risk scores!")
             }
         }
     }
     
     //save risk score baseline to user document
-    func saveRiskScoreBaseline(uid: String, riskScore: Int) {
+    func saveRiskScoreBaseline(uid: String, riskScore: String) {
         print("FirestoreManager: Saving risk score baseline: \(riskScore) for UID: \(uid)")
         
         let data: [String: Any] = [
-            "riskScoreBaseline": riskScore,
+            "baseline_risk_category": riskScore,
             "riskScoreUpdatedAt": FieldValue.serverTimestamp()
         ]
         
@@ -219,6 +260,55 @@ class FirestoreManager {
                 print("Latest document no longer exists")
                 uvCompletion(nil)
                 isPressedCompletion(false, nil)
+            }
+        }
+    }
+    
+    func listenToUserDocumentChanges(uid: String, riskCategoryCompletion: @escaping (String?) -> Void) -> ListenerRegistration {
+        print("FirestoreManager: Setting up real-time listener for user document: \(uid)")
+        
+        return db.collection("users").document(uid).addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error listening to user document: \(error.localizedDescription)")
+                riskCategoryCompletion(nil)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                print("FirestoreManager: User document data keys: \(data?.keys.sorted() ?? [])")
+                
+                // Extract final_risk_category if it exists
+                if let finalRiskCategory = data?["final_risk_category"] as? String {
+                    print("FirestoreManager: final_risk_category from user doc: \(finalRiskCategory)")
+                    riskCategoryCompletion(finalRiskCategory)
+                } else {
+                    print("FirestoreManager: No final_risk_category found in user document")
+                    riskCategoryCompletion(nil)
+                }
+            } else {
+                print("User document no longer exists")
+                riskCategoryCompletion(nil)
+            }
+        }
+    }
+    
+    func fetchRiskCategory(uid: String, completion: @escaping (String?) -> Void) {
+        print("FirestoreManager: Fetching risk category for user: \(uid)")
+        
+        db.collection("users").document(uid).getDocument { documentSnapshot, error in
+            if let error = error {
+                print("FirestoreManager: Error fetching risk category: \(error.localizedDescription)")
+                completion(nil)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                if let finalRiskCategory = data?["final_risk_category"] as? String {
+                    print("FirestoreManager: Fetched risk category: \(finalRiskCategory)")
+                    completion(finalRiskCategory)
+                } else {
+                    print("FirestoreManager: No final_risk_category found in user document")
+                    completion(nil)
+                }
+            } else {
+                print("FirestoreManager: User document no longer exists")
+                completion(nil)
             }
         }
     }

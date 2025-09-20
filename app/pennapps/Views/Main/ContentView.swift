@@ -19,13 +19,15 @@ struct ContentView: View {
     @State private var uvIntensity: Int?
     @State private var isLoadingUV = true
     @State private var uvListener: ListenerRegistration?
+    @State private var userDocListener: ListenerRegistration?
     @State private var lastNotifiedUVLevel: Int? = nil
     @State private var lastAppliedDate: Date?
     @State private var lastIsPressedState: Bool = false
     @State private var aiSummary = ""
     @State private var isLoadingSummary = false
     @State private var summaryError = ""
-    @State private var riskScoreBaseline: Int?
+    @State private var riskScoreBaseline: String?
+    @State private var dynamicRiskCategory: String?
     
     private let cerebrasService = CerebrasService()
     
@@ -73,14 +75,21 @@ struct ContentView: View {
                             if isLoadingUV {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                            } else if let riskScoreBaseline = riskScoreBaseline {
-                                Text("\(riskScoreBaseline)")
-                                    .font(.largeTitle)
+                            } else if let dynamicRisk = dynamicRiskCategory {
+                                Text(dynamicRisk)
+                                    .font(.title2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(riskScoreBaseline >= 10 ? .red : .black)
+                                    .foregroundColor(dynamicRisk.lowercased().contains("high") ? .red : 
+                                                   dynamicRisk.lowercased().contains("medium") ? .orange : .green)
+                            } else if let riskScoreBaseline = riskScoreBaseline {
+                                Text(riskScoreBaseline)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(riskScoreBaseline.lowercased().contains("high") ? .red : 
+                                                   riskScoreBaseline.lowercased().contains("medium") ? .orange : .green)
                             } else {
                                 Text("--")
-                                    .font(.largeTitle)
+                                    .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(.gray)
                             }
@@ -253,32 +262,32 @@ struct ContentView: View {
                                     .multilineTextAlignment(.center)
                                 
                                 //skin tone
-                                Circle()
+                                    Circle()
                                     .fill(getSkinToneColor(for: userData.skinToneIndex))
                                     .frame(width: 50, height: 50)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.black, lineWidth: 2)
-                                    )
-                                
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.black, lineWidth: 2)
+                                        )
+                                    
                                 // User info
                                 VStack(alignment: .center, spacing: 4) {
-                                    Text("Age: \(userData.age)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    
-                                    Text("Skin Tone: \(userData.skinToneIndex)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    //conditions
-                                    if !userData.skinConditions.isEmpty {
-                                        Text("Conditions: \(userData.skinConditions)")
+                                        Text("Age: \(userData.age)")
                                             .font(.body)
                                             .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                        
+                                        Text("Skin Tone: \(userData.skinToneIndex)")
+                                            .font(.body)
+                                            .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                    //conditions
+                                        if !userData.skinConditions.isEmpty {
+                                            Text("Conditions: \(userData.skinConditions)")
+                                                .font(.body)
+                                                .foregroundColor(.black)
                                             .multilineTextAlignment(.center)
-                                            .lineLimit(2)
+                                                .lineLimit(2)
                                     }
                                 }
                             }
@@ -309,10 +318,12 @@ struct ContentView: View {
             fetchUserData()
             fetchLastAppliedDate()
             startUVIntensityListener()
+            startUserDocumentListener()
             requestNotificationPermissions()
         }
         .onDisappear {
             stopUVIntensityListener()
+            stopUserDocumentListener()
         }
     }
     
@@ -390,6 +401,9 @@ struct ContentView: View {
                     if let uvIntensity = uvIntensity {
                         print("ContentView: Setting UV intensity to: \(uvIntensity)")
                         self.checkForSunscreenNotification(uvIntensity: uvIntensity)
+                        
+                        // When UV intensity changes, fetch the updated risk category
+                        self.fetchUpdatedRiskCategory()
                     } else {
                         print("ContentView: UV intensity is nil, showing --")
                     }
@@ -399,30 +413,77 @@ struct ContentView: View {
                 DispatchQueue.main.async {
                     print("ContentView: Received is_pressed update: \(isPressed), date: \(date?.description ?? "nil")")
                     print("ContentView: Previous is_pressed state: \(self.lastIsPressedState)")
+                    print("ContentView: About to check if isPressed is true...")
                     
-                    // Check if is_pressed just became true (sunscreen applied)
-                    if isPressed && !self.lastIsPressedState {
-                        print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
-                        print("ContentView: Sending sunscreen applied notification...")
-                        self.sendSunscreenAppliedNotification()
-                        if let date = date {
-                            self.lastAppliedDate = date
-                            self.saveLastAppliedDateToFirebase(date: date)
+                    // Always update the date when is_pressed is true
+                    if isPressed {
+                        print("ContentView: ✅ isPressed is TRUE! Executing update logic...")
+                        // Use provided date or current date if none provided
+                        let dateToUse = date ?? Date()
+                        print("ContentView: is_pressed is true, updating last applied date to: \(dateToUse)")
+                        self.lastAppliedDate = dateToUse
+                        self.saveLastAppliedDateToFirebase(date: dateToUse)
+                        
+                        // Send notification only when state changes from false to true
+                        if !self.lastIsPressedState {
+                            print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
+                            print("ContentView: Sending sunscreen applied notification...")
+                            self.sendSunscreenAppliedNotification()
                         }
-                    } else if isPressed && date != nil {
-                        // Update the date even if we already knew is_pressed was true
-                        print("ContentView: is_pressed is true, updating date...")
-                        self.lastAppliedDate = date
-                        self.saveLastAppliedDateToFirebase(date: date!)
-                    } else if !isPressed {
+                    } else {
                         print("ContentView: is_pressed is false")
                     }
                     
                     self.lastIsPressedState = isPressed
                     print("ContentView: Updated lastIsPressedState to: \(self.lastIsPressedState)")
+                    print("ContentView: Current lastAppliedDate: \(self.lastAppliedDate?.description ?? "nil")")
                 }
             }
         )
+    }
+    
+    private func startUserDocumentListener() {
+        guard let uid = authManager.user?.uid else {
+            print("ContentView: No user UID available for user document listener")
+            return
+        }
+        
+        print("Starting user document listener for risk category...")
+        
+        userDocListener = FirestoreManager.shared.listenToUserDocumentChanges(
+            uid: uid,
+            riskCategoryCompletion: { riskCategory in
+                DispatchQueue.main.async {
+                    print("ContentView: Received risk category update from user doc: \(riskCategory ?? "nil")")
+                    self.dynamicRiskCategory = riskCategory
+                }
+            }
+        )
+    }
+    
+    private func stopUserDocumentListener() {
+        print("Stopping user document listener...")
+        userDocListener?.remove()
+    }
+    
+    private func fetchUpdatedRiskCategory() {
+        guard let uid = authManager.user?.uid else {
+            print("ContentView: No user UID available for fetching risk category")
+            return
+        }
+        
+        print("ContentView: Fetching updated risk category due to UV change...")
+        
+        FirestoreManager.shared.fetchRiskCategory(uid: uid) { riskCategory in
+            DispatchQueue.main.async {
+                if let riskCategory = riskCategory {
+                    print("ContentView: Updated risk category from UV change: \(riskCategory)")
+                    self.dynamicRiskCategory = riskCategory
+                } else {
+                    print("ContentView: No risk category available")
+                }
+            }
+        }
     }
     
     private func stopUVIntensityListener() {
@@ -579,7 +640,9 @@ struct ContentView: View {
                 let summary = try await cerebrasService.generateUserSummary(
                     age: userData.age,
                     skinConditions: userData.skinConditions,
-                    severityScore: severityScore
+                    severityScore: severityScore,
+                    riskScoreBaseline: riskScoreBaseline,
+                    skinToneIndex: userData.skinToneIndex
                 )
                 
                 await MainActor.run {

@@ -117,3 +117,5 @@ dist/
 # Platform.io (for your ESP32 firmware)
 firmware/.pio/
 firmware/compile_commands.json
+
+riskCalculation/firebasekey.json
