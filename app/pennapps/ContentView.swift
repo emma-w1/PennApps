@@ -39,6 +39,20 @@ struct ContentView: View {
         Color(red: 60/255, green: 31/255, blue: 29/255)
     ]
     
+    //widget colors to randomize
+    let widgetColors: [Color] = [
+        Color(red: 235/255, green: 205/255, blue: 170/255), // light orange
+        Color(red: 200/255, green: 240/255, blue: 200/255), // light green
+        Color(red: 255/255, green: 248/255, blue: 220/255)  // light yellow
+    ]
+    
+    //random colors for each widget
+    @State private var riskScoreColor: Color = Color(red: 235/255, green: 205/255, blue: 170/255)
+    @State private var aiSummaryColor: Color = Color(red: 200/255, green: 240/255, blue: 200/255)
+    @State private var uvIntensityColor: Color = Color(red: 235/255, green: 205/255, blue: 170/255)
+    @State private var lastAppliedColor: Color = Color(red: 255/255, green: 248/255, blue: 220/255)
+    @State private var userInfoColor: Color = Color(red: 200/255, green: 240/255, blue: 200/255)
+    
     var body: some View {
         NavigationStack {
             //topbar
@@ -76,7 +90,7 @@ struct ContentView: View {
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                                .fill(riskScoreColor)
                         )
 
                     // ai skin summary based on demographics, UV, risk score
@@ -157,7 +171,7 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(Color(red: 200/255, green: 240/255, blue: 200/255))
+                            .fill(aiSummaryColor)
                     )
 
                     //load in the UV intensity from the firebase sensor data
@@ -189,12 +203,12 @@ struct ContentView: View {
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                                .fill(uvIntensityColor)
                         )
                         
                         //last time sunscreen was applied from the button sensor data
                         VStack (alignment: .center, spacing: 10) {
-                            Text("Last Applied")
+                            Text("Sunscreen Last Applied")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.black)
@@ -217,7 +231,7 @@ struct ContentView: View {
                         .padding(.horizontal, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                                .fill(lastAppliedColor)
                         )
                     }
                     
@@ -280,7 +294,7 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                            .fill(userInfoColor)
                     )
                     
                     
@@ -291,6 +305,7 @@ struct ContentView: View {
             .padding(.top, 0)
         }
         .onAppear {
+            assignRandomColors()
             fetchUserData()
             fetchLastAppliedDate()
             startUVIntensityListener()
@@ -299,6 +314,15 @@ struct ContentView: View {
         .onDisappear {
             stopUVIntensityListener()
         }
+    }
+    
+    //assign random colors to widgets
+    private func assignRandomColors() {
+        riskScoreColor = widgetColors.randomElement() ?? widgetColors[0]
+        aiSummaryColor = widgetColors.randomElement() ?? widgetColors[0]
+        uvIntensityColor = widgetColors.randomElement() ?? widgetColors[0]
+        lastAppliedColor = widgetColors.randomElement() ?? widgetColors[0]
+        userInfoColor = widgetColors.randomElement() ?? widgetColors[0]
     }
     
     //fetch data like skin color, user data, sensor data
