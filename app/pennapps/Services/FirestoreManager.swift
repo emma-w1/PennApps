@@ -12,13 +12,6 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
-struct UserData {
-    let email: String
-    let age: String
-    let skinToneIndex: Int
-    let skinConditions: String
-}
-
 class FirestoreManager {
     static let shared = FirestoreManager()
     

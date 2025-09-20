@@ -40,7 +40,7 @@ struct MainAppView: View {
             let config = Config.shared
             print(config.getConfigurationStatus())
             
-            let gemini = GeminiService()
+            let cerebras = CerebrasService()
             
             // Test a few quick cases
             let testCases = ["none", "acne"]
