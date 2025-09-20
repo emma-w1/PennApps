@@ -18,7 +18,7 @@ struct UserData {
     let age: String
     let skinToneIndex: Int
     let skinConditions: String
-    let riskScoreBaseline: Int?
+    let riskScoreBaseline: String?
 }
 
 //manage firestore
@@ -56,7 +56,7 @@ class FirestoreManager {
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
                     skinConditions: data?["skinConditions"] as? String ?? "",
-                    riskScoreBaseline: data?["riskScoreBaseline"] as? Int
+                    riskScoreBaseline: data?["riskScoreBaseline"] as? String
                 )
                 completion(userData)
             } else {
@@ -92,7 +92,7 @@ class FirestoreManager {
     }
     
     //save risk score baseline to user document
-    func saveRiskScoreBaseline(uid: String, riskScore: Int) {
+    func saveRiskScoreBaseline(uid: String, riskScore: String) {
         print("FirestoreManager: Saving risk score baseline: \(riskScore) for UID: \(uid)")
         
         let data: [String: Any] = [

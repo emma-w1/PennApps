@@ -25,7 +25,7 @@ struct ContentView: View {
     @State private var aiSummary = ""
     @State private var isLoadingSummary = false
     @State private var summaryError = ""
-    @State private var riskScoreBaseline: Int?
+    @State private var riskScoreBaseline: String?
     
     private let geminiService = GeminiService()
     
@@ -74,13 +74,14 @@ struct ContentView: View {
                                 ProgressView()
                                     .scaleEffect(0.8)
                             } else if let riskScoreBaseline = riskScoreBaseline {
-                                Text("\(riskScoreBaseline)")
-                                    .font(.largeTitle)
+                                Text(riskScoreBaseline)
+                                    .font(.title2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(riskScoreBaseline >= 10 ? .red : .black)
+                                    .foregroundColor(riskScoreBaseline.lowercased().contains("high") ? .red : 
+                                                   riskScoreBaseline.lowercased().contains("medium") ? .orange : .green)
                             } else {
                                 Text("--")
-                                    .font(.largeTitle)
+                                    .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(.gray)
                             }
@@ -253,32 +254,32 @@ struct ContentView: View {
                                     .multilineTextAlignment(.center)
                                 
                                 //skin tone
-                                Circle()
+                                    Circle()
                                     .fill(getSkinToneColor(for: userData.skinToneIndex))
                                     .frame(width: 50, height: 50)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.black, lineWidth: 2)
-                                    )
-                                
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.black, lineWidth: 2)
+                                        )
+                                    
                                 // User info
                                 VStack(alignment: .center, spacing: 4) {
-                                    Text("Age: \(userData.age)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    
-                                    Text("Skin Tone: \(userData.skinToneIndex)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    //conditions
-                                    if !userData.skinConditions.isEmpty {
-                                        Text("Conditions: \(userData.skinConditions)")
+                                        Text("Age: \(userData.age)")
                                             .font(.body)
                                             .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                        
+                                        Text("Skin Tone: \(userData.skinToneIndex)")
+                                            .font(.body)
+                                            .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                    //conditions
+                                        if !userData.skinConditions.isEmpty {
+                                            Text("Conditions: \(userData.skinConditions)")
+                                                .font(.body)
+                                                .foregroundColor(.black)
                                             .multilineTextAlignment(.center)
-                                            .lineLimit(2)
+                                                .lineLimit(2)
                                     }
                                 }
                             }
@@ -399,27 +400,30 @@ struct ContentView: View {
                 DispatchQueue.main.async {
                     print("ContentView: Received is_pressed update: \(isPressed), date: \(date?.description ?? "nil")")
                     print("ContentView: Previous is_pressed state: \(self.lastIsPressedState)")
+                    print("ContentView: About to check if isPressed is true...")
                     
-                    // Check if is_pressed just became true (sunscreen applied)
-                    if isPressed && !self.lastIsPressedState {
-                        print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
-                        print("ContentView: Sending sunscreen applied notification...")
-                        self.sendSunscreenAppliedNotification()
-                        if let date = date {
-                            self.lastAppliedDate = date
-                            self.saveLastAppliedDateToFirebase(date: date)
+                    // Always update the date when is_pressed is true
+                    if isPressed {
+                        print("ContentView: ✅ isPressed is TRUE! Executing update logic...")
+                        // Use provided date or current date if none provided
+                        let dateToUse = date ?? Date()
+                        print("ContentView: is_pressed is true, updating last applied date to: \(dateToUse)")
+                        self.lastAppliedDate = dateToUse
+                        self.saveLastAppliedDateToFirebase(date: dateToUse)
+                        
+                        // Send notification only when state changes from false to true
+                        if !self.lastIsPressedState {
+                            print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
+                            print("ContentView: Sending sunscreen applied notification...")
+                            self.sendSunscreenAppliedNotification()
                         }
-                    } else if isPressed && date != nil {
-                        // Update the date even if we already knew is_pressed was true
-                        print("ContentView: is_pressed is true, updating date...")
-                        self.lastAppliedDate = date
-                        self.saveLastAppliedDateToFirebase(date: date!)
-                    } else if !isPressed {
+                    } else {
                         print("ContentView: is_pressed is false")
                     }
                     
                     self.lastIsPressedState = isPressed
                     print("ContentView: Updated lastIsPressedState to: \(self.lastIsPressedState)")
+                    print("ContentView: Current lastAppliedDate: \(self.lastAppliedDate?.description ?? "nil")")
                 }
             }
         )
@@ -577,7 +581,9 @@ struct ContentView: View {
                 let summary = try await geminiService.generateUserSummary(
                     age: userData.age,
                     skinConditions: userData.skinConditions,
-                    severityScore: severityScore
+                    severityScore: severityScore,
+                    riskScoreBaseline: riskScoreBaseline,
+                    skinToneIndex: userData.skinToneIndex
                 )
                 
                 await MainActor.run {

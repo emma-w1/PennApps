@@ -158,7 +158,9 @@ struct UserSummaryView: View {
                 let generatedSummary = try await geminiService.generateUserSummary(
                     age: userAge,
                     skinConditions: userConditions,
-                    severityScore: severityScore
+                    severityScore: severityScore,
+                    riskScoreBaseline: nil,
+                    skinToneIndex: 3
                 )
                 
                 await MainActor.run {

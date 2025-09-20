@@ -260,16 +260,16 @@ class GeminiService: ObservableObject {
         return severity
     }
     
-    func generateUserSummary(age: String, skinConditions: String, severityScore: Int) async throws -> String {
+    func generateUserSummary(age: String, skinConditions: String, severityScore: Int, riskScoreBaseline: String?, skinToneIndex: Int) async throws -> String {
         // Check if API key is properly configured
         guard let apiKey = apiKey else {
             print("⚠️ Gemini API key not configured. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore)
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore, riskScoreBaseline: riskScoreBaseline, skinToneIndex: skinToneIndex)
         }
         
         guard config.hasValidGeminiKey else {
             print("⚠️ Gemini API key appears to be a placeholder. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore)
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore, riskScoreBaseline: riskScoreBaseline, skinToneIndex: skinToneIndex)
         }
         
         let prompt = """
@@ -334,107 +334,80 @@ class GeminiService: ObservableObject {
         return summary
     }
         
-    private func generateFallbackSummary(age: String, skinConditions: String, severityScore: Int) -> String {
+    private func generateFallbackSummary(age: String, skinConditions: String, severityScore: Int, riskScoreBaseline: String?, skinToneIndex: Int) -> String {
         let ageInt = Int(age) ?? 0
-        let cleanedConditions = skinConditions.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanedConditions = skinConditions.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baselineRisk = riskScoreBaseline ?? "Unknown"
         
-        // Determine age group
-        let ageGroup: String
-        let ageSpecificAdvice: String
+        // Determine skin tone description
+        let skinToneDescription: String
+        switch skinToneIndex {
+        case 1: skinToneDescription = "very light skin"
+        case 2: skinToneDescription = "light skin"
+        case 3: skinToneDescription = "medium-light skin"
+        case 4: skinToneDescription = "medium skin"
+        case 5: skinToneDescription = "medium-dark skin"
+        case 6: skinToneDescription = "dark skin"
+        default: skinToneDescription = "medium skin"
+        }
+        
+        // Determine condition history
+        let conditionHistory: String
+        if cleanedConditions.isEmpty || cleanedConditions.lowercased().contains("none") || cleanedConditions.lowercased().contains("normal") {
+            conditionHistory = "no significant skin conditions"
+        } else {
+            conditionHistory = cleanedConditions
+        }
+        
+        // Determine age impact
+        let ageImpact: String
         if ageInt < 18 {
-            ageGroup = "teenager"
-            ageSpecificAdvice = "🌟 As a teenager, your skin is still developing. Consistent sunscreen use now will prevent long-term damage and maintain healthy skin for decades to come!"
+            ageImpact = "young age contributes to lower risk"
         } else if ageInt < 30 {
-            ageGroup = "young adult"
-            ageSpecificAdvice = "🌱 Your skin is in its prime! Establishing good habits now will keep your skin looking youthful and healthy as you age."
+            ageImpact = "age contributes moderately to risk"
         } else if ageInt < 50 {
-            ageGroup = "adult"
-            ageSpecificAdvice = "💪 Prevention is key at this stage. Consistent protection will help maintain your skin's health and prevent premature aging."
+            ageImpact = "age increases baseline risk"
         } else {
-            ageGroup = "mature adult"
-            ageSpecificAdvice = "✨ Your skin may be more sensitive now. Gentle, consistent care with proper UV protection is essential for maintaining skin health."
+            ageImpact = "age significantly increases risk"
         }
         
-        // Determine skin condition advice
-        let conditionAdvice: String
-        let conditionEmoji: String
-        if cleanedConditions.isEmpty || cleanedConditions.contains("none") || cleanedConditions.contains("normal") {
-            conditionAdvice = "Your skin appears to be in good condition. Continue with gentle care and consistent UV protection."
-            conditionEmoji = "✨"
-        } else if cleanedConditions.contains("acne") {
-            conditionAdvice = "If you have acne-prone skin, choose non-comedogenic sunscreens and avoid heavy, oily formulas. Look for 'oil-free' and 'non-comedogenic' labels."
-            conditionEmoji = "🩹"
-        } else if cleanedConditions.contains("sensitive") || cleanedConditions.contains("irritat") {
-            conditionAdvice = "For sensitive skin, choose mineral sunscreens with zinc oxide or titanium dioxide. Avoid chemical sunscreens that may cause irritation."
-            conditionEmoji = "🤲"
-        } else if cleanedConditions.contains("dry") {
-            conditionAdvice = "Dry skin needs extra hydration. Choose sunscreens with moisturizing ingredients and apply moisturizer before sunscreen."
-            conditionEmoji = "💧"
-        } else if cleanedConditions.contains("oily") {
-            conditionAdvice = "For oily skin, choose lightweight, matte-finish sunscreens. Look for 'oil-free' and 'mattifying' formulas."
-            conditionEmoji = "🛢️"
+        // Determine tone impact
+        let toneImpact: String
+        if skinToneIndex <= 2 {
+            toneImpact = "lighter skin increases risk significantly"
+        } else if skinToneIndex <= 4 {
+            toneImpact = "moderate skin tone affects risk moderately"
         } else {
-            conditionAdvice = "With your specific skin conditions, consult with a dermatologist for personalized sunscreen recommendations."
-            conditionEmoji = "👨‍⚕️"
+            toneImpact = "darker skin provides some natural protection"
         }
         
-        // Determine risk level advice
-        let riskAdvice: String
-        let riskEmoji: String
-        switch severityScore {
-        case 0:
-            riskAdvice = "Your UV risk is minimal. Standard SPF 30+ sunscreen is sufficient for daily protection."
-            riskEmoji = "🟢"
-        case 1:
-            riskAdvice = "You have a low UV risk. SPF 30+ sunscreen with broad-spectrum protection is recommended."
-            riskEmoji = "🟡"
-        case 2:
-            riskAdvice = "You have a moderate UV risk. Use SPF 30-50+ sunscreen and reapply every 2 hours when outdoors."
-            riskEmoji = "🟠"
-        case 3:
-            riskAdvice = "You have an elevated UV risk. Use SPF 50+ sunscreen, wear protective clothing, and seek shade during peak hours (10 AM - 4 PM)."
-            riskEmoji = "🔴"
-        case 4:
-            riskAdvice = "You have a high UV risk. Use SPF 50+ sunscreen, wear UPF clothing, wide-brimmed hats, and avoid peak sun hours when possible."
-            riskEmoji = "🔴"
-        case 5:
-            riskAdvice = "You have a very high UV risk. Use maximum protection: SPF 50+ sunscreen, UPF clothing, hats, sunglasses, and minimize sun exposure during peak hours."
-            riskEmoji = "🔴"
-        default:
-            riskAdvice = "Use standard SPF 30+ sunscreen for daily protection."
-            riskEmoji = "🟡"
+        // Determine product recommendations
+        let productRec: String
+        if skinToneIndex <= 2 && severityScore >= 3 {
+            productRec = "SPF 50+ mineral sunscreen, UPF clothing"
+        } else if skinToneIndex <= 3 {
+            productRec = "SPF 30-50 broad-spectrum sunscreen"
+        } else {
+            productRec = "SPF 30+ broad-spectrum sunscreen"
         }
         
-        // Generate personalized summary
+        // Generate shorter, formatted summary
         let summary = """
-        🧴 **Your Personalized Skin Care Summary**
+        Your baseline risk score is **\(baselineRisk)**. This is affected by your age (\(ageInt)), past skin history of **\(conditionHistory)**, and your **\(skinToneDescription)**.
         
-        **👤 Profile:** \(ageInt)-year-old \(ageGroup)
-        **🎯 UV Risk Level:** \(severityScore)/5 \(riskEmoji)
-        **💡 Skin Condition:** \(conditionEmoji) \(conditionAdvice)
+        **How each factor affects your risk:**
+        • **Age:** Your \(ageImpact)
+        • **Skin Conditions:** \(conditionHistory == "no significant skin conditions" ? "No conditions keep risk lower" : "Conditions increase susceptibility")
+        • **Skin Tone:** Your \(toneImpact)
         
-        **🛡️ UV Protection Recommendations:**
-        \(riskAdvice)
+        **UV Impact:** With severity \(severityScore)/5, \(severityScore >= 3 ? "extra caution needed" : "standard protection sufficient")
         
-        **🌟 Age-Specific Advice:**
-        \(ageSpecificAdvice)
+        **Recommended Products:** \(productRec)
         
-        **📋 Daily Routine Tips:**
-        • Apply sunscreen 15-30 minutes before sun exposure
-        • Reapply every 2 hours, or after swimming/sweating
-        • Use a broad-spectrum sunscreen (protects against UVA & UVB)
-        • Don't forget your neck, ears, and hands!
-        
-        **⏰ Best Practices:**
-        • Peak UV hours: 10 AM - 4 PM (seek shade during these times)
-        • UV index 3+: Sunscreen recommended
-        • UV index 6+: Extra protection needed
-        • UV index 8+: Avoid outdoor activities if possible
-        
-        Remember: Consistent protection is key to maintaining healthy, youthful skin! 🌞✨
+        Reapply sunscreen every 2 hours! 🌞
         """
         
-        print("✅ Fallback Summary Generated for age \(age), conditions: \(skinConditions), severity: \(severityScore)")
+        print("✅ Personalized Risk Summary Generated - Baseline: \(baselineRisk), Age: \(age), Conditions: \(skinConditions), Skin Tone: \(skinToneIndex)")
         return summary
     }
 }
