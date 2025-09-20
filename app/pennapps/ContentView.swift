@@ -13,6 +13,11 @@ struct ContentView: View {
     @State private var isLoading = true
     @State private var uvIndex: Int?
     @State private var isLoadingUV = true
+    @State private var aiSummary = ""
+    @State private var isLoadingSummary = false
+    @State private var summaryError = ""
+    
+    private let geminiService = GeminiService()
     
     let skinTones: [Color] = [
         Color(red: 244/255, green: 208/255, blue: 177/255),
@@ -27,26 +32,6 @@ struct ContentView: View {
         NavigationStack {
             Topbar()
                 .padding(.horizontal, 0)
-                .padding(.top, 0)
-                .padding(.bottom, 10)
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20){
-                    HStack(spacing: 16) {
-                        VStack (alignment: .center, spacing: 10) {
-                            Text("Current UV Index")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .multilineTextAlignment(.center)
-                            
-                            if isLoadingUV {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else if let uvIndex = uvIndex {
-                                Text("\(uvIndex)")
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
                 .padding(.top, 0)
                 .padding(.bottom, 10)
             
@@ -163,33 +148,76 @@ struct ContentView: View {
                             .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
                     )
                     
-                    VStack (alignment: .center, spacing: 10) {
-                        Text("AI Skin Analysis")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.black)
-                        
-                        VStack(spacing: 12) {
-                            // Summarize button - main feature
-                            NavigationLink("📋 Get My Skin Summary & Tips") {
-                                UserSummaryView()
-                            }
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .fontWeight(.medium)
+                    VStack (alignment: .leading, spacing: 15) {
+                        HStack {
+                            Text("🤖 AI Skin Summary")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
                             
-                            // Add test button for Gemini
-                            NavigationLink("🧪 Test AI Analysis") {
-                                GeminiTestView()
+                            Spacer()
+                            
+                            Button(action: {
+                                generateAISummary()
+                            }) {
+                                HStack(spacing: 6) {
+                                    if isLoadingSummary {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                            .tint(.white)
+                                    } else {
+                                        Image(systemName: "sparkles")
+                                            .font(.caption)
+                                    }
+                                    Text(isLoadingSummary ? "Generating..." : "Generate")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
                             }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                            .font(.caption)
+                            .disabled(isLoadingSummary || userData == nil)
+                        }
+                        
+                        if !summaryError.isEmpty {
+                            Text("⚠️ \(summaryError)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(6)
+                        }
+                        
+                        if aiSummary.isEmpty && !isLoadingSummary && summaryError.isEmpty {
+                            Text("🔮 Get personalized skin care tips and UV protection advice based on your profile. Tap 'Generate' to create your AI-powered summary!")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.leading)
+                                .italic()
+                        } else if !aiSummary.isEmpty {
+                            ScrollView {
+                                Text(aiSummary)
+                                    .font(.body)
+                                    .foregroundColor(.black)
+                                    .multilineTextAlignment(.leading)
+                                    .lineSpacing(2)
+                            }
+                            .frame(maxHeight: 200)
+                        }
+                        
+                        if isLoadingSummary {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Analyzing your profile and generating personalized recommendations...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 8)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -197,7 +225,7 @@ struct ContentView: View {
                     .padding(.horizontal, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                            .fill(Color(red: 200/255, green: 240/255, blue: 200/255))
                     )
                     
                 }
@@ -253,7 +281,59 @@ struct ContentView: View {
                     print("Successfully fetched UV index: \(uvIndex)")
                 } else {
                     print("Failed to fetch UV index or no data available")
->>>>>>> 65b36984a71b609597e9dde8cb7afee12a5d3421
+                }
+            }
+        }
+    }
+    
+    private func generateAISummary() {
+        guard let userData = userData else {
+            summaryError = "No user data available. Please ensure your profile is complete."
+            return
+        }
+        
+        isLoadingSummary = true
+        summaryError = ""
+        aiSummary = ""
+        
+        print("🤖 Generating AI summary for user: Age=\(userData.age), Conditions=\(userData.skinConditions)")
+        
+        Task {
+            do {
+                // Get severity score from Firebase if available, otherwise calculate it
+                let severityScore: Int
+                if let uid = authManager.user?.uid {
+                    if let firebaseData = try? await FirestoreManager.shared.getUserData(uid: uid),
+                       let storedSeverity = firebaseData["conditionSeverity"] as? Int {
+                        severityScore = storedSeverity
+                        print("📊 Using stored severity score: \(severityScore)")
+                    } else {
+                        // Calculate severity if not stored
+                        severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: userData.skinConditions)
+                        print("🔍 Calculated severity score: \(severityScore)")
+                    }
+                } else {
+                    severityScore = 1 // Default fallback
+                }
+                
+                // Generate personalized summary
+                let summary = try await geminiService.generateUserSummary(
+                    age: userData.age,
+                    skinConditions: userData.skinConditions,
+                    severityScore: severityScore
+                )
+                
+                await MainActor.run {
+                    isLoadingSummary = false
+                    aiSummary = summary
+                    print("✅ AI Summary generated successfully")
+                }
+                
+            } catch {
+                await MainActor.run {
+                    isLoadingSummary = false
+                    summaryError = "Failed to generate summary: \(error.localizedDescription)"
+                    print("❌ AI Summary generation failed: \(error)")
                 }
             }
         }
