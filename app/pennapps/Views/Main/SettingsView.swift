@@ -227,8 +227,8 @@ struct SettingsView: View {
         // Use Gemini to analyze skin conditions and get severity score
         Task {
             do {
-                let cerebrasService = CerebrasService()
-                let severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: skinConditions)
+                let geminiService = GeminiService()
+                let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
                 
                 await MainActor.run {
                     // Save to Firebase with Gemini analysis

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Configuration manager for app settings and API keys
-/// Note: CerebrasService now handles its own API key loading
+/// Note: GeminiService now handles its own API key loading
 class Config {
     static let shared = Config()
     
@@ -27,7 +27,7 @@ class Config {
     
     /// Get configuration status for debugging
     func getConfigurationStatus() -> String {
-        // Since CerebrasService now handles its own secrets, we delegate to it
+        // Since GeminiService now handles its own secrets, we delegate to it
         return "🔐 App Configuration Status:\n" + getCerebrasStatus()
     }
     
@@ -42,12 +42,12 @@ class Config {
     // MARK: - Private Helpers
     
     private func getCerebrasStatus() -> String {
-        // Check via CerebrasService's own key detection
+        // Check via GeminiService's own key detection
         return hasCerebrasKey() ? "✅ Cerebras API Key: Available" : "❌ Cerebras API Key: Not configured"
     }
     
     private func hasCerebrasKey() -> Bool {
-        // Check if CerebrasService can find its API key
+        // Check if GeminiService can find its API key
         if let env = ProcessInfo.processInfo.environment["CEREBRAS_API_KEY"], !env.isEmpty {
             return true
         }

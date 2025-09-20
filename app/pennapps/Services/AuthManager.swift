@@ -19,7 +19,7 @@ class AuthManager: ObservableObject {
     @Published var isAnalyzingSkinConditions = false
     
     // Gemini service for skin condition analysis
-    private let cerebrasService = CerebrasService()
+    private let geminiService = GeminiService()
     
     init() {
     //authentication changes
@@ -72,7 +72,7 @@ class AuthManager: ObservableObject {
         Task {
             do {
                 // Step 1: Analyze skin conditions with Gemini
-                let severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: skinConditions)
+                let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
                 print("✅ Gemini Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
                 
                 await MainActor.run {

@@ -29,7 +29,7 @@ struct ContentView: View {
     @State private var riskScoreBaseline: String?
     @State private var dynamicRiskCategory: String?
     
-    private let cerebrasService = CerebrasService()
+    private let geminiService = GeminiService()
     
     //possible skin tones to pick from
     let skinTones: [Color] = [
@@ -629,7 +629,7 @@ struct ContentView: View {
                         print("📊 Using stored severity score: \(severityScore)")
                     } else {
                         // Calculate severity if not stored
-                        severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: userData.skinConditions)
+                        severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: userData.skinConditions)
                         print("🔍 Calculated severity score: \(severityScore)")
                     }
                 } else {
@@ -637,7 +637,7 @@ struct ContentView: View {
                 }
                 
                 // Generate personalized summary
-                let summary = try await cerebrasService.generateUserSummary(
+                let summary = try await geminiService.generateUserSummary(
                     age: userData.age,
                     skinConditions: userData.skinConditions,
                     severityScore: severityScore,
