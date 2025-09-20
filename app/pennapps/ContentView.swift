@@ -6,13 +6,19 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
+import UserNotifications
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var userData: UserData?
     @State private var isLoading = true
-    @State private var uvIndex: Int?
+    @State private var uvIntensity: Int?
     @State private var isLoadingUV = true
+    @State private var uvListener: ListenerRegistration?
+    @State private var lastNotifiedUVLevel: Int? = nil
+    @State private var lastAppliedDate: Date?
+    @State private var lastIsPressedState: Bool = false
     @State private var aiSummary = ""
     @State private var isLoadingSummary = false
     @State private var summaryError = ""
@@ -39,7 +45,7 @@ struct ContentView: View {
                 VStack(spacing: 20){
                     HStack(spacing: 16) {
                         VStack (alignment: .center, spacing: 10) {
-                            Text("Current UV Index")
+                            Text("Current UV Intensity")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.black)
@@ -48,11 +54,11 @@ struct ContentView: View {
                             if isLoadingUV {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                            } else if let uvIndex = uvIndex {
-                                Text("\(uvIndex)")
+                            } else if let uvIntensity = uvIntensity {
+                                Text("\(uvIntensity)")
                                     .font(.largeTitle)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(uvIntensity >= 10 ? .red : .black)
                             } else {
                                 Text("--")
                                     .font(.largeTitle)
@@ -74,8 +80,18 @@ struct ContentView: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(.black)
                                 .multilineTextAlignment(.center)
-                            Text("Placeholder")
-                                .multilineTextAlignment(.center)
+                            
+                            if let lastAppliedDate = lastAppliedDate {
+                                Text(formatDate(lastAppliedDate))
+                                    .font(.body)
+                                    .foregroundColor(.black)
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                Text("Never")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .padding(.vertical, 20)
@@ -103,7 +119,7 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                 
-                                // Skin tone circle (centered)
+                                // Skin tone
                                 Circle()
                                     .fill(getSkinToneColor(for: userData.skinToneIndex))
                                     .frame(width: 50, height: 50)
@@ -112,7 +128,7 @@ struct ContentView: View {
                                             .stroke(Color.black, lineWidth: 2)
                                     )
                                 
-                                // User info (centered)
+                                // User info 
                                 VStack(alignment: .center, spacing: 4) {
                                     Text("Age: \(userData.age)")
                                         .font(.body)
@@ -236,7 +252,11 @@ struct ContentView: View {
         }
         .onAppear {
             fetchUserData()
-            fetchUVIndex()
+            startUVIntensityListener()
+            requestNotificationPermissions()
+        }
+        .onDisappear {
+            stopUVIntensityListener()
         }
     }
     
@@ -270,22 +290,134 @@ struct ContentView: View {
         }
     }
     
-    private func fetchUVIndex() {
-        print("Fetching UV index from latest document...")
+    private func startUVIntensityListener() {
+        print("Starting UV intensity and is_pressed real-time listener...")
         
-        FirestoreManager.shared.fetchLatestUVIndex { uvIndex in
-            DispatchQueue.main.async {
-                self.uvIndex = uvIndex
-                self.isLoadingUV = false
-                if let uvIndex = uvIndex {
-                    print("Successfully fetched UV index: \(uvIndex)")
-                } else {
-                    print("Failed to fetch UV index or no data available")
+        uvListener = FirestoreManager.shared.listenToLatestDocumentChanges(
+            uvCompletion: { uvIntensity in
+                DispatchQueue.main.async {
+                    print("ContentView: Received UV intensity update: \(uvIntensity ?? -999)")
+                    self.uvIntensity = uvIntensity
+                    self.isLoadingUV = false
+                    if let uvIntensity = uvIntensity {
+                        print("ContentView: Setting UV intensity to: \(uvIntensity)")
+                        self.checkForSunscreenNotification(uvIntensity: uvIntensity)
+                    } else {
+                        print("ContentView: UV intensity is nil, showing --")
+                    }
                 }
+            },
+            isPressedCompletion: { isPressed, date in
+                DispatchQueue.main.async {
+                    print("ContentView: Received is_pressed update: \(isPressed), date: \(date?.description ?? "nil")")
+                    
+                    // Check if is_pressed just became true (sunscreen applied)
+                    if isPressed && !self.lastIsPressedState {
+                        print("ContentView: Sunscreen applied! Sending notification.")
+                        self.sendSunscreenAppliedNotification()
+                        self.lastAppliedDate = date
+                    } else if isPressed && date != nil {
+                        // Update the date even if we already knew is_pressed was true
+                        self.lastAppliedDate = date
+                    }
+                    
+                    self.lastIsPressedState = isPressed
+                }
+            }
+        )
+    }
+    
+    private func stopUVIntensityListener() {
+        print("Stopping UV intensity listener...")
+        uvListener?.remove()
+        uvListener = nil
+    }
+    
+    private func requestNotificationPermissions() {
+        print("Requesting notification permissions...")
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            } else if granted {
+                print("Notification permissions granted")
+            } else {
+                print("Notification permissions denied")
             }
         }
     }
     
+    private func checkForSunscreenNotification(uvIntensity: Int) {
+        // Check if UV intensity is 10 or higher
+        if uvIntensity >= 10 {
+            // Only send notification if we haven't already notified for this level
+            if lastNotifiedUVLevel != uvIntensity {
+                print("🌞 High UV intensity detected: \(uvIntensity). Sending sunscreen notification.")
+                lastNotifiedUVLevel = uvIntensity
+                sendSunscreenNotification(uvIntensity: uvIntensity)
+            }
+        } else {
+            // Reset the notified level when UV goes below 10
+            if lastNotifiedUVLevel != nil {
+                print("UV intensity dropped below 10. Resetting notification state.")
+                lastNotifiedUVLevel = nil
+            }
+        }
+    }
+    
+    private func sendSunscreenNotification(uvIntensity: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "🌞 Sunscreen Reminder"
+        content.body = "UV intensity is \(uvIntensity)! Please apply/re-apply sunscreen to protect your skin from harmful UV rays."
+        content.sound = .default
+        content.badge = 1
+        
+        // Create immediate notification trigger
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        // Create unique identifier for this notification
+        let identifier = "sunscreen_reminder_\(uvIntensity)_\(Date().timeIntervalSince1970)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        // Add the notification
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule sunscreen notification: \(error.localizedDescription)")
+            } else {
+                print("Sunscreen notification scheduled successfully for UV level: \(uvIntensity)")
+            }
+        }
+    }
+    
+    private func sendSunscreenAppliedNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "✅ Sunscreen Applied!"
+        content.body = "Great job! You've applied sunscreen to protect your skin."
+        content.sound = .default
+        content.badge = 1
+        
+        // Create immediate notification trigger
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        // Create unique identifier for this notification
+        let identifier = "sunscreen_applied_\(Date().timeIntervalSince1970)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        // Add the notification
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule sunscreen applied notification: \(error.localizedDescription)")
+            } else {
+                print("Sunscreen applied notification scheduled successfully")
+            }
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
     private func generateAISummary() {
         guard let userData = userData else {
             summaryError = "No user data available. Please ensure your profile is complete."

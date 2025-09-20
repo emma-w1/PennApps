@@ -15,6 +15,7 @@ struct History: View {
                 Text("HISTORY")
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .foregroundStyle(.yellow)
                 Spacer()
             }
         }

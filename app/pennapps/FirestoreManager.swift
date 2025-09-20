@@ -28,6 +28,7 @@ class FirestoreManager {
         print("FirestoreManager initialized")
     }
     
+    //test connection w firestore database
     func testConnection() {
         print("Testing Firestore connection...")
         db.collection("test").document("test").setData(["test": "value"]) { error in
@@ -39,6 +40,7 @@ class FirestoreManager {
         }
     }
     
+    //fetch the user's data like email, age, skin tone, conditions from database to app
     func fetchUserData(uid: String, completion: @escaping (UserData?) -> Void) {
         db.collection("users").document(uid).getDocument { document, error in
             if let error = error {
@@ -60,6 +62,7 @@ class FirestoreManager {
         }
     }
     
+    //save user data from app to datadase
     func saveUserInfo(uid: String, email: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int, severityScore: Int) {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
@@ -69,10 +72,11 @@ class FirestoreManager {
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
-            "conditionSeverity": severityScore,  // ← Gemini analysis result
+            "conditionSeverity": severityScore,  
             "createdAt": FieldValue.serverTimestamp()
         ]
         
+        //prints specific gemini value for skin conditoin severity
         print("FirestoreManager: Attempting to write to Firestore with Gemini data...")
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
@@ -83,8 +87,7 @@ class FirestoreManager {
         }
     }
     
-    }
-    
+
     func getUserData(uid: String) async throws -> [String: Any]? {
         print("FirestoreManager: Fetching user data for UID: \(uid)")
         
@@ -107,18 +110,125 @@ class FirestoreManager {
     
     func fetchLatestUVIndex(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Fetching latest UV index...")
-        
+    }
+       
+        // users/latest document first
         db.collection("users").document("latest").getDocument { document, error in
             if let error = error {
-                print("Error fetching latest UV index: \(error.localizedDescription)")
+                print("Error fetching from users/latest: \(error.localizedDescription)")
+                self.fetchFromPublicUVCollection(completion: completion)
+            } else if let document = document, document.exists {
+                let data = document.data()
+                print("FirestoreManager: Latest document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to uv_index
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
+                print("FirestoreManager: Retrieved UV intensity from users/latest: \(uvIntensity ?? -1)")
+                completion(uvIntensity)
+            } else {
+                print("users/latest document does not exist, trying public collection")
+                self.fetchFromPublicUVCollection(completion: completion)
+            }
+        }
+    }
+    
+    private func fetchFromPublicUVCollection(completion: @escaping (Int?) -> Void) {
+        print("FirestoreManager: Trying public UV data collection...")
+        
+        db.collection("uvData").document("current").getDocument { document, error in
+            if let error = error {
+                print("Error fetching from public UV collection: \(error.localizedDescription)")
                 completion(nil)
             } else if let document = document, document.exists {
                 let data = document.data()
-                let uvIndex = data?["uv_index"] as? Int
-                print("FirestoreManager: Retrieved UV index: \(uvIndex ?? -1)")
-                completion(uvIndex)
+                print("FirestoreManager: Public UV document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to other field names
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int ?? data?["intensity"] as? Int
+                print("FirestoreManager: Retrieved UV intensity from public collection: \(uvIntensity ?? -1)")
+                completion(uvIntensity)
             } else {
-                print("Latest document does not exist")
+                print("No UV data found in any collection")
+                completion(nil)
+            }
+        }
+    }
+    
+    func listenToUVIntensityChanges(completion: @escaping (Int?) -> Void) -> ListenerRegistration {
+        print("FirestoreManager: Setting up real-time listener for UV intensity...")
+        
+        // Try to listen to users/latest first
+        let listener = db.collection("users").document("latest").addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error listening to users/latest: \(error.localizedDescription)")
+                // Fallback: try listening to public collection
+                self.setupPublicUVListener(completion: completion)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                print("FirestoreManager: Real-time document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to uv_index
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
+                print("FirestoreManager: Real-time UV intensity update from users/latest: \(uvIntensity ?? -1)")
+                completion(uvIntensity)
+            } else {
+                print("users/latest document no longer exists, trying public collection")
+                self.setupPublicUVListener(completion: completion)
+            }
+        }
+        
+        return listener
+    }
+    
+    func listenToLatestDocumentChanges(uvCompletion: @escaping (Int?) -> Void, isPressedCompletion: @escaping (Bool, Date?) -> Void) -> ListenerRegistration {
+        print("FirestoreManager: Setting up real-time listener for latest document...")
+        
+        return db.collection("users").document("latest").addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error listening to latest document: \(error.localizedDescription)")
+                uvCompletion(nil)
+                isPressedCompletion(false, nil)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                print("FirestoreManager: Latest document data: \(data ?? [:])")
+                
+                // Extract UV intensity
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
+                print("FirestoreManager: UV intensity: \(uvIntensity ?? -1)")
+                uvCompletion(uvIntensity)
+                
+                // Extract is_pressed and timestamp
+                let isPressed = data?["is_pressed"] as? Bool ?? false
+                let timestamp = data?["timestamp"] as? Timestamp
+                let date = timestamp?.dateValue()
+                
+                print("FirestoreManager: is_pressed: \(isPressed), timestamp: \(date?.description ?? "nil")")
+                isPressedCompletion(isPressed, date)
+            } else {
+                print("Latest document no longer exists")
+                uvCompletion(nil)
+                isPressedCompletion(false, nil)
+            }
+        }
+    }
+    
+    private func setupPublicUVListener(completion: @escaping (Int?) -> Void) -> ListenerRegistration {
+        print("FirestoreManager: Setting up public UV data listener...")
+        
+        return db.collection("uvData").document("current").addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error listening to public UV collection: \(error.localizedDescription)")
+                completion(nil)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                print("FirestoreManager: Real-time public UV document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to other field names
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int ?? data?["intensity"] as? Int
+                print("FirestoreManager: Real-time UV intensity update from public collection: \(uvIntensity ?? -1)")
+                completion(uvIntensity)
+            } else {
+                print("Public UV document no longer exists")
                 completion(nil)
             }
         }
