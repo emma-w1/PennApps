@@ -27,16 +27,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
 }
 
+// MARK: - Notification Delegate
 extension AppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        print("Notification received in foreground: \(notification.request.content.title)")
+        print("📱 Notification received in foreground: \(notification.request.content.title)")
         completionHandler([.banner, .sound, .badge])
     }
     
     // Handle notification taps
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        print("Notification tapped: \(response.notification.request.content.title)")
+        print("📱 Notification tapped: \(response.notification.request.content.title)")
         completionHandler()
     }
 }

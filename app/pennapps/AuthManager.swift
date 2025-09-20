@@ -4,7 +4,7 @@
 //
 //  Created by Adishree Das on 9/19/25.
 //
-
+//manages user authentication and data (login, log out, registration, save user info)
 
 import Foundation
 import FirebaseAuth
@@ -65,7 +65,6 @@ class AuthManager: ObservableObject {
             return
         }
         
-        // Start analyzing skin conditions with Gemini
         isAnalyzingSkinConditions = true
         errorMessage = nil
         

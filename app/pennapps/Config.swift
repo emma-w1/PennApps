@@ -273,13 +273,13 @@ class GeminiService: ObservableObject {
     func generateUserSummary(age: String, skinConditions: String, severityScore: Int) async throws -> String {
         // Check if API key is properly configured
         guard let apiKey = apiKey else {
-            print("⚠️ Gemini API key not configured. Using default summary.")
-            return "⚠️ AI analysis unavailable. Please ensure you're protecting your skin with appropriate sunscreen based on your age (\(age)) and skin conditions."
+            print("⚠️ Gemini API key not configured. Using fallback summary.")
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore)
         }
         
         guard config.hasValidGeminiKey else {
-            print("⚠️ Gemini API key appears to be a placeholder. Using default summary.")
-            return "⚠️ AI analysis unavailable. Please ensure you're protecting your skin with appropriate sunscreen."
+            print("⚠️ Gemini API key appears to be a placeholder. Using fallback summary.")
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, severityScore: severityScore)
         }
         
         let prompt = """
@@ -341,6 +341,112 @@ class GeminiService: ObservableObject {
         
         let summary = text.trimmingCharacters(in: .whitespacesAndNewlines)
         print("✅ Gemini Summary Generated for age \(age), conditions: \(skinConditions)")
+        return summary
+    }
+    
+    // MARK: - Fallback Summary Generation
+    
+    private func generateFallbackSummary(age: String, skinConditions: String, severityScore: Int) -> String {
+        let ageInt = Int(age) ?? 0
+        let cleanedConditions = skinConditions.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        // Determine age group
+        let ageGroup: String
+        let ageSpecificAdvice: String
+        if ageInt < 18 {
+            ageGroup = "teenager"
+            ageSpecificAdvice = "🌟 As a teenager, your skin is still developing. Consistent sunscreen use now will prevent long-term damage and maintain healthy skin for decades to come!"
+        } else if ageInt < 30 {
+            ageGroup = "young adult"
+            ageSpecificAdvice = "🌱 Your skin is in its prime! Establishing good habits now will keep your skin looking youthful and healthy as you age."
+        } else if ageInt < 50 {
+            ageGroup = "adult"
+            ageSpecificAdvice = "💪 Prevention is key at this stage. Consistent protection will help maintain your skin's health and prevent premature aging."
+        } else {
+            ageGroup = "mature adult"
+            ageSpecificAdvice = "✨ Your skin may be more sensitive now. Gentle, consistent care with proper UV protection is essential for maintaining skin health."
+        }
+        
+        // Determine skin condition advice
+        let conditionAdvice: String
+        let conditionEmoji: String
+        if cleanedConditions.isEmpty || cleanedConditions.contains("none") || cleanedConditions.contains("normal") {
+            conditionAdvice = "Your skin appears to be in good condition. Continue with gentle care and consistent UV protection."
+            conditionEmoji = "✨"
+        } else if cleanedConditions.contains("acne") {
+            conditionAdvice = "If you have acne-prone skin, choose non-comedogenic sunscreens and avoid heavy, oily formulas. Look for 'oil-free' and 'non-comedogenic' labels."
+            conditionEmoji = "🩹"
+        } else if cleanedConditions.contains("sensitive") || cleanedConditions.contains("irritat") {
+            conditionAdvice = "For sensitive skin, choose mineral sunscreens with zinc oxide or titanium dioxide. Avoid chemical sunscreens that may cause irritation."
+            conditionEmoji = "🤲"
+        } else if cleanedConditions.contains("dry") {
+            conditionAdvice = "Dry skin needs extra hydration. Choose sunscreens with moisturizing ingredients and apply moisturizer before sunscreen."
+            conditionEmoji = "💧"
+        } else if cleanedConditions.contains("oily") {
+            conditionAdvice = "For oily skin, choose lightweight, matte-finish sunscreens. Look for 'oil-free' and 'mattifying' formulas."
+            conditionEmoji = "🛢️"
+        } else {
+            conditionAdvice = "With your specific skin conditions, consult with a dermatologist for personalized sunscreen recommendations."
+            conditionEmoji = "👨‍⚕️"
+        }
+        
+        // Determine risk level advice
+        let riskAdvice: String
+        let riskEmoji: String
+        switch severityScore {
+        case 0:
+            riskAdvice = "Your UV risk is minimal. Standard SPF 30+ sunscreen is sufficient for daily protection."
+            riskEmoji = "🟢"
+        case 1:
+            riskAdvice = "You have a low UV risk. SPF 30+ sunscreen with broad-spectrum protection is recommended."
+            riskEmoji = "🟡"
+        case 2:
+            riskAdvice = "You have a moderate UV risk. Use SPF 30-50+ sunscreen and reapply every 2 hours when outdoors."
+            riskEmoji = "🟠"
+        case 3:
+            riskAdvice = "You have an elevated UV risk. Use SPF 50+ sunscreen, wear protective clothing, and seek shade during peak hours (10 AM - 4 PM)."
+            riskEmoji = "🔴"
+        case 4:
+            riskAdvice = "You have a high UV risk. Use SPF 50+ sunscreen, wear UPF clothing, wide-brimmed hats, and avoid peak sun hours when possible."
+            riskEmoji = "🔴"
+        case 5:
+            riskAdvice = "You have a very high UV risk. Use maximum protection: SPF 50+ sunscreen, UPF clothing, hats, sunglasses, and minimize sun exposure during peak hours."
+            riskEmoji = "🔴"
+        default:
+            riskAdvice = "Use standard SPF 30+ sunscreen for daily protection."
+            riskEmoji = "🟡"
+        }
+        
+        // Generate personalized summary
+        let summary = """
+        🧴 **Your Personalized Skin Care Summary**
+        
+        **👤 Profile:** \(ageInt)-year-old \(ageGroup)
+        **🎯 UV Risk Level:** \(severityScore)/5 \(riskEmoji)
+        **💡 Skin Condition:** \(conditionEmoji) \(conditionAdvice)
+        
+        **🛡️ UV Protection Recommendations:**
+        \(riskAdvice)
+        
+        **🌟 Age-Specific Advice:**
+        \(ageSpecificAdvice)
+        
+        **📋 Daily Routine Tips:**
+        • Apply sunscreen 15-30 minutes before sun exposure
+        • Reapply every 2 hours, or after swimming/sweating
+        • Use a broad-spectrum sunscreen (protects against UVA & UVB)
+        • Don't forget your neck, ears, and hands!
+        
+        **⏰ Best Practices:**
+        • Peak UV hours: 10 AM - 4 PM (seek shade during these times)
+        • UV index 3+: Sunscreen recommended
+        • UV index 6+: Extra protection needed
+        • UV index 8+: Avoid outdoor activities if possible
+        
+        Remember: Consistent protection is key to maintaining healthy, youthful skin! 🌞✨
+        """
+        
+        print("✅ Fallback Summary Generated for age \(age), conditions: \(skinConditions), severity: \(severityScore)")
         return summary
     }
 }

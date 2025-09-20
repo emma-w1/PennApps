@@ -18,6 +18,12 @@ struct Topbar: View {
         .frame(maxWidth: .infinity)
         .ignoresSafeArea(.container, edges: .top)
         .frame(height: 60)
+        
+        Rectangle()
+            .fill(.orange)
+            .frame(height: 2)
+            .frame(maxWidth: .infinity)
+            .padding(.top,0)
 
     }
 }

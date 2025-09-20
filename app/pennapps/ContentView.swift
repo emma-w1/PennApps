@@ -199,7 +199,7 @@ struct ContentView: View {
                         }
                         
                         if !summaryError.isEmpty {
-                            Text("⚠️ \(summaryError)")
+                            Text("\(summaryError)")
                                 .font(.caption)
                                 .foregroundColor(.red)
                                 .padding(.horizontal, 12)
@@ -209,7 +209,7 @@ struct ContentView: View {
                         }
                         
                         if aiSummary.isEmpty && !isLoadingSummary && summaryError.isEmpty {
-                            Text("🔮 Get personalized skin care tips and UV protection advice based on your profile. Tap 'Generate' to create your AI-powered summary!")
+                            Text("Get personalized skin care tips and UV protection advice based on your profile. Tap 'Generate' to create your AI-powered summary!")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.leading)
@@ -252,6 +252,7 @@ struct ContentView: View {
         }
         .onAppear {
             fetchUserData()
+            fetchLastAppliedDate()
             startUVIntensityListener()
             requestNotificationPermissions()
         }
@@ -290,6 +291,21 @@ struct ContentView: View {
         }
     }
     
+    private func fetchLastAppliedDate() {
+        print("Fetching last applied date from users/latest document")
+        
+        FirestoreManager.shared.fetchLastAppliedDate { date in
+            DispatchQueue.main.async {
+                if let date = date {
+                    print("Successfully fetched last applied date: \(date)")
+                    self.lastAppliedDate = date
+                } else {
+                    print("No last applied date found in latest document")
+                }
+            }
+        }
+    }
+    
     private func startUVIntensityListener() {
         print("Starting UV intensity and is_pressed real-time listener...")
         
@@ -310,18 +326,28 @@ struct ContentView: View {
             isPressedCompletion: { isPressed, date in
                 DispatchQueue.main.async {
                     print("ContentView: Received is_pressed update: \(isPressed), date: \(date?.description ?? "nil")")
+                    print("ContentView: Previous is_pressed state: \(self.lastIsPressedState)")
                     
                     // Check if is_pressed just became true (sunscreen applied)
                     if isPressed && !self.lastIsPressedState {
-                        print("ContentView: Sunscreen applied! Sending notification.")
+                        print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
+                        print("ContentView: Sending sunscreen applied notification...")
                         self.sendSunscreenAppliedNotification()
-                        self.lastAppliedDate = date
+                        if let date = date {
+                            self.lastAppliedDate = date
+                            self.saveLastAppliedDateToFirebase(date: date)
+                        }
                     } else if isPressed && date != nil {
                         // Update the date even if we already knew is_pressed was true
+                        print("ContentView: is_pressed is true, updating date...")
                         self.lastAppliedDate = date
+                        self.saveLastAppliedDateToFirebase(date: date!)
+                    } else if !isPressed {
+                        print("ContentView: is_pressed is false")
                     }
                     
                     self.lastIsPressedState = isPressed
+                    print("ContentView: Updated lastIsPressedState to: \(self.lastIsPressedState)")
                 }
             }
         )
@@ -365,6 +391,8 @@ struct ContentView: View {
     }
     
     private func sendSunscreenNotification(uvIntensity: Int) {
+        print("🔔 Attempting to send UV sunscreen reminder notification...")
+        
         let content = UNMutableNotificationContent()
         content.title = "🌞 Sunscreen Reminder"
         content.body = "UV intensity is \(uvIntensity)! Please apply/re-apply sunscreen to protect your skin from harmful UV rays."
@@ -378,17 +406,29 @@ struct ContentView: View {
         let identifier = "sunscreen_reminder_\(uvIntensity)_\(Date().timeIntervalSince1970)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         
-        // Add the notification
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Failed to schedule sunscreen notification: \(error.localizedDescription)")
+        // Check notification settings first
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            print("🔔 UV Notification settings check:")
+            print("   Authorization status: \(settings.authorizationStatus.rawValue)")
+            
+            if settings.authorizationStatus == .authorized {
+                // Add the notification
+                UNUserNotificationCenter.current().add(request) { error in
+                    if let error = error {
+                        print("❌ Failed to schedule UV sunscreen notification: \(error.localizedDescription)")
+                    } else {
+                        print("✅ UV sunscreen notification scheduled successfully for UV level: \(uvIntensity)")
+                    }
+                }
             } else {
-                print("Sunscreen notification scheduled successfully for UV level: \(uvIntensity)")
+                print("❌ UV Notifications not authorized. Status: \(settings.authorizationStatus.rawValue)")
             }
         }
     }
     
     private func sendSunscreenAppliedNotification() {
+        print("🔔 Attempting to send sunscreen applied notification...")
+        
         let content = UNMutableNotificationContent()
         content.title = "✅ Sunscreen Applied!"
         content.body = "Great job! You've applied sunscreen to protect your skin."
@@ -402,12 +442,25 @@ struct ContentView: View {
         let identifier = "sunscreen_applied_\(Date().timeIntervalSince1970)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         
-        // Add the notification
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Failed to schedule sunscreen applied notification: \(error.localizedDescription)")
+        // Check notification settings first
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            print("🔔 Current notification settings:")
+            print("   Authorization status: \(settings.authorizationStatus.rawValue)")
+            print("   Alert setting: \(settings.alertSetting.rawValue)")
+            print("   Badge setting: \(settings.badgeSetting.rawValue)")
+            print("   Sound setting: \(settings.soundSetting.rawValue)")
+            
+            if settings.authorizationStatus == .authorized {
+                // Add the notification
+                UNUserNotificationCenter.current().add(request) { error in
+                    if let error = error {
+                        print("❌ Failed to schedule sunscreen applied notification: \(error.localizedDescription)")
+                    } else {
+                        print("✅ Sunscreen applied notification scheduled successfully")
+                    }
+                }
             } else {
-                print("Sunscreen applied notification scheduled successfully")
+                print("❌ Notifications not authorized. Status: \(settings.authorizationStatus.rawValue)")
             }
         }
     }
@@ -417,6 +470,11 @@ struct ContentView: View {
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    
+    private func saveLastAppliedDateToFirebase(date: Date) {
+        print("Saving last applied date to Firebase latest document: \(date)")
+        FirestoreManager.shared.saveLastAppliedDate(date: date)
     }
     private func generateAISummary() {
         guard let userData = userData else {

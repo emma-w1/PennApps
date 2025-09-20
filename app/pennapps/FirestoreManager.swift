@@ -110,8 +110,7 @@ class FirestoreManager {
     
     func fetchLatestUVIndex(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Fetching latest UV index...")
-    }
-       
+        
         // users/latest document first
         db.collection("users").document("latest").getDocument { document, error in
             if let error = error {
@@ -162,7 +161,7 @@ class FirestoreManager {
             if let error = error {
                 print("Error listening to users/latest: \(error.localizedDescription)")
                 // Fallback: try listening to public collection
-                self.setupPublicUVListener(completion: completion)
+                let _ = self.setupPublicUVListener(completion: completion)
             } else if let document = documentSnapshot, document.exists {
                 let data = document.data()
                 print("FirestoreManager: Real-time document data: \(data ?? [:])")
@@ -173,7 +172,7 @@ class FirestoreManager {
                 completion(uvIntensity)
             } else {
                 print("users/latest document no longer exists, trying public collection")
-                self.setupPublicUVListener(completion: completion)
+                let _ = self.setupPublicUVListener(completion: completion)
             }
         }
         
@@ -234,37 +233,54 @@ class FirestoreManager {
         }
     }
     
-    func fetchUserData(uid: String, completion: @escaping (UserData?) -> Void) {
-        print("FirestoreManager: Fetching user data for UID: \(uid)")
+    // MARK: - Last Applied Date Management
+    
+    func saveLastAppliedDate(date: Date) {
+        print("FirestoreManager: Saving last applied date to users/latest document")
         
-        db.collection("users").document(uid).getDocument { document, error in
+        let dateData: [String: Any] = [
+            "lastAppliedDate": Timestamp(date: date),
+            "lastAppliedTimestamp": date.timeIntervalSince1970,
+            "lastAppliedUpdatedAt": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("users").document("latest").updateData(dateData) { error in
             if let error = error {
-                print("Error fetching user document: \(error.localizedDescription)")
+                print("Error saving last applied date to latest document: \(error.localizedDescription)")
+            } else {
+                print("✅ Last applied date saved successfully to latest document: \(date)")
+            }
+        }
+    }
+    
+    func fetchLastAppliedDate(completion: @escaping (Date?) -> Void) {
+        print("FirestoreManager: Fetching last applied date from users/latest document")
+        
+        db.collection("users").document("latest").getDocument { document, error in
+            if let error = error {
+                print("Error fetching last applied date from latest document: \(error.localizedDescription)")
                 completion(nil)
             } else if let document = document, document.exists {
                 let data = document.data()
                 
-                if let age = data?["age"] as? String,
-                   let skinToneIndex = data?["skinToneIndex"] as? Int,
-                   let skinConditions = data?["skinConditions"] as? String {
-                    
-                    let userData = UserData(
-                        email: "", // Email not stored in user document
-                        age: age,
-                        skinToneIndex: skinToneIndex,
-                        skinConditions: skinConditions
-                    )
-                    
-                    print("FirestoreManager: Successfully parsed user data - Age: \(age), SkinTone: \(skinToneIndex), Conditions: \(skinConditions)")
-                    completion(userData)
+                // Try to get the date from Timestamp first, then fallback to timestamp
+                if let timestamp = data?["lastAppliedDate"] as? Timestamp {
+                    let date = timestamp.dateValue()
+                    print("FirestoreManager: Retrieved last applied date from Timestamp: \(date)")
+                    completion(date)
+                } else if let timestamp = data?["lastAppliedTimestamp"] as? TimeInterval {
+                    let date = Date(timeIntervalSince1970: timestamp)
+                    print("FirestoreManager: Retrieved last applied date from timestamp: \(date)")
+                    completion(date)
                 } else {
-                    print("FirestoreManager: Failed to parse user data from document")
+                    print("FirestoreManager: No last applied date found in latest document")
                     completion(nil)
                 }
             } else {
-                print("User document does not exist for UID: \(uid)")
+                print("Latest document does not exist for last applied date")
                 completion(nil)
             }
         }
     }
+    
 }
