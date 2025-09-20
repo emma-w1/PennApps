@@ -18,6 +18,7 @@ struct UserData {
     let age: String
     let skinToneIndex: Int
     let skinConditions: String
+    let riskScoreBaseline: Int?
 }
 
 //manage firestore
@@ -54,7 +55,8 @@ class FirestoreManager {
                     email: data?["email"] as? String ?? "",
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
-                    skinConditions: data?["skinConditions"] as? String ?? ""
+                    skinConditions: data?["skinConditions"] as? String ?? "",
+                    riskScoreBaseline: data?["riskScoreBaseline"] as? Int
                 )
                 completion(userData)
             } else {
@@ -85,6 +87,24 @@ class FirestoreManager {
                 print("Error writing user document: \(error.localizedDescription)")
             } else {
                 print("User data successfully written to Firestore with severity score: \(severityScore)!")
+            }
+        }
+    }
+    
+    //save risk score baseline to user document
+    func saveRiskScoreBaseline(uid: String, riskScore: Int) {
+        print("FirestoreManager: Saving risk score baseline: \(riskScore) for UID: \(uid)")
+        
+        let data: [String: Any] = [
+            "riskScoreBaseline": riskScore,
+            "riskScoreUpdatedAt": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("users").document(uid).updateData(data) { error in
+            if let error = error {
+                print("Error saving risk score baseline: \(error.localizedDescription)")
+            } else {
+                print("✅ Risk score baseline saved successfully: \(riskScore)")
             }
         }
     }

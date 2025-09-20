@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var aiSummary = ""
     @State private var isLoadingSummary = false
     @State private var summaryError = ""
+    @State private var riskScoreBaseline: Int?
     
     private let geminiService = GeminiService()
     
@@ -46,12 +47,37 @@ struct ContentView: View {
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 20){
-                    HStack(spacing: 16) {
 
                     //risk score (final)
-                    VStack (alignment: .leading, spacing:15) {
-
-                    }
+                    VStack (alignment: .center, spacing: 10) {
+                        Text("Risk Score")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .multilineTextAlignment(.center)
+                            
+                            if isLoadingUV {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else if let riskScoreBaseline = riskScoreBaseline {
+                                Text("\(riskScoreBaseline)")
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(riskScoreBaseline >= 10 ? .red : .black)
+                            } else {
+                                Text("--")
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                        .padding(.vertical, 20)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 25)
+                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                        )
 
                     // ai skin summary based on demographics, UV, risk score
                     VStack (alignment: .leading, spacing: 15) {
@@ -134,7 +160,8 @@ struct ContentView: View {
                             .fill(Color(red: 200/255, green: 240/255, blue: 200/255))
                     )
 
-                        //load in the UV intensity from the firebase sensor data
+                    //load in the UV intensity from the firebase sensor data
+                    HStack {
                         VStack (alignment: .center, spacing: 10) {
                             Text("Current UV Intensity")
                                 .font(.title2)
@@ -296,14 +323,21 @@ struct ContentView: View {
                 if let userData = data {
                     print("Successfully fetched user data for: \(userData.email)")
                     print("User data - Age: \(userData.age), Skin Tone: \(userData.skinToneIndex), Conditions: \(userData.skinConditions)")
+                    if let riskScore = userData.riskScoreBaseline {
+                        print("Risk Score Baseline: \(riskScore)")
+                    } else {
+                        print("No risk score baseline found")
+                    }
                 } else {
                     print("Failed to fetch user data for UID: \(uid)")
                 }
                 self.userData = data
+                self.riskScoreBaseline = data?.riskScoreBaseline
                 self.isLoading = false
             }
         }
     }
+    
     
     private func fetchLastAppliedDate() {
         print("Fetching last applied date from users/latest document")
