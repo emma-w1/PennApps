@@ -16,6 +16,16 @@ struct ContentView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
+                // Summarize button - main feature
+                NavigationLink("📋 Get My Skin Summary & Tips") {
+                    UserSummaryView()
+                }
+                .padding()
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .fontWeight(.medium)
+                
                 // Add test button for Gemini
                 NavigationLink("🧪 Test AI Skin Analysis") {
                     GeminiTestView()

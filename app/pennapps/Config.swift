@@ -269,6 +269,80 @@ class GeminiService: ObservableObject {
         print("✅ Gemini Analysis: '\(conditions)' → Severity: \(severity)")
         return severity
     }
+    
+    func generateUserSummary(age: String, skinConditions: String, severityScore: Int) async throws -> String {
+        // Check if API key is properly configured
+        guard let apiKey = apiKey else {
+            print("⚠️ Gemini API key not configured. Using default summary.")
+            return "⚠️ AI analysis unavailable. Please ensure you're protecting your skin with appropriate sunscreen based on your age (\(age)) and skin conditions."
+        }
+        
+        guard config.hasValidGeminiKey else {
+            print("⚠️ Gemini API key appears to be a placeholder. Using default summary.")
+            return "⚠️ AI analysis unavailable. Please ensure you're protecting your skin with appropriate sunscreen."
+        }
+        
+        let prompt = """
+        Create a personalized skin care summary and UV protection tips for a user with the following profile:
+        
+        Age: \(age) years old
+        Skin Conditions: \(skinConditions)
+        UV Risk Score: \(severityScore)/5 (where 0=no risk, 5=severe risk)
+        
+        Please provide:
+        1. A brief summary of their skin profile
+        2. Specific UV protection recommendations based on their age and conditions
+        3. 3-4 actionable skincare tips
+        4. Any specific precautions for their skin conditions
+        
+        Keep the response under 300 words, friendly, and practical. Use emojis to make it engaging.
+        Format with clear sections but don't use markdown headers.
+        """
+        
+        let requestBody: [String: Any] = [
+            "contents": [
+                [
+                    "parts": [
+                        ["text": prompt]
+                    ]
+                ]
+            ],
+            "generationConfig": [
+                "maxOutputTokens": 400,
+                "temperature": 0.7
+            ]
+        ]
+        
+        guard let url = URL(string: "\(baseURL)?key=\(apiKey)") else {
+            throw GeminiError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw GeminiError.apiError
+        }
+        
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let candidates = json["candidates"] as? [[String: Any]],
+              let firstCandidate = candidates.first,
+              let content = firstCandidate["content"] as? [String: Any],
+              let parts = content["parts"] as? [[String: Any]],
+              let firstPart = parts.first,
+              let text = firstPart["text"] as? String else {
+            throw GeminiError.parseError
+        }
+        
+        let summary = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        print("✅ Gemini Summary Generated for age \(age), conditions: \(skinConditions)")
+        return summary
+    }
 }
 
 enum GeminiError: Error {

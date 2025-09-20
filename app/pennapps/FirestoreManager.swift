@@ -54,4 +54,24 @@ class FirestoreManager {
             }
         }
     }
+    
+    func getUserData(uid: String) async throws -> [String: Any]? {
+        print("FirestoreManager: Fetching user data for UID: \(uid)")
+        
+        do {
+            let document = try await db.collection("users").document(uid).getDocument()
+            
+            if document.exists {
+                let data = document.data()
+                print("FirestoreManager: Successfully retrieved user data")
+                return data
+            } else {
+                print("FirestoreManager: No user document found")
+                return nil
+            }
+        } catch {
+            print("FirestoreManager: Error fetching user data: \(error.localizedDescription)")
+            throw error
+        }
+    }
 }
