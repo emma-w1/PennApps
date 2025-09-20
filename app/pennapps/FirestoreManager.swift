@@ -87,9 +87,31 @@ class FirestoreManager {
         }
     }
     
-    func fetchLatestUVIntensity(completion: @escaping (Int?) -> Void) {
-        print("FirestoreManager: Fetching latest UV intensity...")
+
+    func getUserData(uid: String) async throws -> [String: Any]? {
+        print("FirestoreManager: Fetching user data for UID: \(uid)")
         
+        do {
+            let document = try await db.collection("users").document(uid).getDocument()
+            
+            if document.exists {
+                let data = document.data()
+                print("FirestoreManager: Successfully retrieved user data")
+                return data
+            } else {
+                print("FirestoreManager: No user document found")
+                return nil
+            }
+        } catch {
+            print("FirestoreManager: Error fetching user data: \(error.localizedDescription)")
+            throw error
+        }
+    }
+    
+    func fetchLatestUVIndex(completion: @escaping (Int?) -> Void) {
+        print("FirestoreManager: Fetching latest UV index...")
+    }
+       
         // users/latest document first
         db.collection("users").document("latest").getDocument { document, error in
             if let error = error {
@@ -207,6 +229,40 @@ class FirestoreManager {
                 completion(uvIntensity)
             } else {
                 print("Public UV document no longer exists")
+                completion(nil)
+            }
+        }
+    }
+    
+    func fetchUserData(uid: String, completion: @escaping (UserData?) -> Void) {
+        print("FirestoreManager: Fetching user data for UID: \(uid)")
+        
+        db.collection("users").document(uid).getDocument { document, error in
+            if let error = error {
+                print("Error fetching user document: \(error.localizedDescription)")
+                completion(nil)
+            } else if let document = document, document.exists {
+                let data = document.data()
+                
+                if let age = data?["age"] as? String,
+                   let skinToneIndex = data?["skinToneIndex"] as? Int,
+                   let skinConditions = data?["skinConditions"] as? String {
+                    
+                    let userData = UserData(
+                        email: "", // Email not stored in user document
+                        age: age,
+                        skinToneIndex: skinToneIndex,
+                        skinConditions: skinConditions
+                    )
+                    
+                    print("FirestoreManager: Successfully parsed user data - Age: \(age), SkinTone: \(skinToneIndex), Conditions: \(skinConditions)")
+                    completion(userData)
+                } else {
+                    print("FirestoreManager: Failed to parse user data from document")
+                    completion(nil)
+                }
+            } else {
+                print("User document does not exist for UID: \(uid)")
                 completion(nil)
             }
         }
