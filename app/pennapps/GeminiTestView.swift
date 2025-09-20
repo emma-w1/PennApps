@@ -1,5 +1,4 @@
 import SwiftUI
-
 /// Debug view to test Gemini skin condition analysis
 struct GeminiTestView: View {
     @State private var testCondition = ""

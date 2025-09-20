@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseCore
+import UserNotifications
 
 //firebase config
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -18,9 +19,26 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize configuration without async operations in AppDelegate
         Config.shared.initializeApp()
         
+        // Set up notification delegate
+        UNUserNotificationCenter.current().delegate = self
+        
         return true
     }
     
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    // Handle notifications when app is in foreground
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        print("Notification received in foreground: \(notification.request.content.title)")
+        completionHandler([.banner, .sound, .badge])
+    }
+    
+    // Handle notification taps
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        print("Notification tapped: \(response.notification.request.content.title)")
+        completionHandler()
+    }
 }
 
 @main

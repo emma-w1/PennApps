@@ -28,6 +28,7 @@ class FirestoreManager {
         print("FirestoreManager initialized")
     }
     
+    //test connection w firestore database
     func testConnection() {
         print("Testing Firestore connection...")
         db.collection("test").document("test").setData(["test": "value"]) { error in
@@ -39,6 +40,7 @@ class FirestoreManager {
         }
     }
     
+    //fetch the user's data like email, age, skin tone, conditions from database to app
     func fetchUserData(uid: String, completion: @escaping (UserData?) -> Void) {
         db.collection("users").document(uid).getDocument { document, error in
             if let error = error {
@@ -60,6 +62,7 @@ class FirestoreManager {
         }
     }
     
+    //save user data from app to datadase
     func saveUserInfo(uid: String, email: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int, severityScore: Int) {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
@@ -69,10 +72,11 @@ class FirestoreManager {
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
-            "conditionSeverity": severityScore,  // ← Gemini analysis result
+            "conditionSeverity": severityScore,  
             "createdAt": FieldValue.serverTimestamp()
         ]
         
+        //prints specific gemini value for skin conditoin severity
         print("FirestoreManager: Attempting to write to Firestore with Gemini data...")
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
@@ -83,18 +87,22 @@ class FirestoreManager {
         }
     }
     
+    //fetch latest UV from the database
     func fetchLatestUVIntensity(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Fetching latest UV intensity...")
         
-        // Try the users/latest document first
+        // users/latest document
         db.collection("users").document("latest").getDocument { document, error in
             if let error = error {
                 print("Error fetching from users/latest: \(error.localizedDescription)")
-                // Fallback: try a public UV data collection
                 self.fetchFromPublicUVCollection(completion: completion)
+                return
             } else if let document = document, document.exists {
                 let data = document.data()
-                let uvIntensity = data?["uv_index"] as? Int
+                print("FirestoreManager: Latest document data: \(data ?? [:])")
+                
+                // UV_raw field first, then fallback to uv_index
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
                 print("FirestoreManager: Retrieved UV intensity from users/latest: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
             } else {
@@ -113,7 +121,10 @@ class FirestoreManager {
                 completion(nil)
             } else if let document = document, document.exists {
                 let data = document.data()
-                let uvIntensity = data?["uv_index"] as? Int ?? data?["intensity"] as? Int
+                print("FirestoreManager: Public UV document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to other field names
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int ?? data?["intensity"] as? Int
                 print("FirestoreManager: Retrieved UV intensity from public collection: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
             } else {
@@ -134,7 +145,10 @@ class FirestoreManager {
                 self.setupPublicUVListener(completion: completion)
             } else if let document = documentSnapshot, document.exists {
                 let data = document.data()
-                let uvIntensity = data?["uv_index"] as? Int
+                print("FirestoreManager: Real-time document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to uv_index
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
                 print("FirestoreManager: Real-time UV intensity update from users/latest: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
             } else {
@@ -155,7 +169,10 @@ class FirestoreManager {
                 completion(nil)
             } else if let document = documentSnapshot, document.exists {
                 let data = document.data()
-                let uvIntensity = data?["uv_index"] as? Int ?? data?["intensity"] as? Int
+                print("FirestoreManager: Real-time public UV document data: \(data ?? [:])")
+                
+                // Try UV_raw field first, then fallback to other field names
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int ?? data?["intensity"] as? Int
                 print("FirestoreManager: Real-time UV intensity update from public collection: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
             } else {

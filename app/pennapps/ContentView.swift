@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
+import UserNotifications
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -15,6 +16,7 @@ struct ContentView: View {
     @State private var uvIntensity: Int?
     @State private var isLoadingUV = true
     @State private var uvListener: ListenerRegistration?
+    @State private var lastNotifiedUVLevel: Int? = nil
     
     let skinTones: [Color] = [
         Color(red: 244/255, green: 208/255, blue: 177/255),
@@ -49,7 +51,7 @@ struct ContentView: View {
                                 Text("\(uvIntensity)")
                                     .font(.largeTitle)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(uvIntensity >= 10 ? .red : .black)
                             } else {
                                 Text("--")
                                     .font(.largeTitle)
@@ -100,7 +102,7 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                 
-                                // Skin tone circle (centered)
+                                // Skin tone
                                 Circle()
                                     .fill(getSkinToneColor(for: userData.skinToneIndex))
                                     .frame(width: 50, height: 50)
@@ -109,7 +111,7 @@ struct ContentView: View {
                                             .stroke(Color.black, lineWidth: 2)
                                     )
                                 
-                                // User info (centered)
+                                // User info 
                                 VStack(alignment: .center, spacing: 4) {
                                     Text("Age: \(userData.age)")
                                         .font(.body)
@@ -169,6 +171,7 @@ struct ContentView: View {
         .onAppear {
             fetchUserData()
             startUVIntensityListener()
+            requestNotificationPermissions()
         }
         .onDisappear {
             stopUVIntensityListener()
@@ -210,12 +213,14 @@ struct ContentView: View {
         
         uvListener = FirestoreManager.shared.listenToUVIntensityChanges { uvIntensity in
             DispatchQueue.main.async {
+                print("ContentView: Received UV intensity update: \(uvIntensity ?? -999)")
                 self.uvIntensity = uvIntensity
                 self.isLoadingUV = false
                 if let uvIntensity = uvIntensity {
-                    print("Real-time UV intensity update: \(uvIntensity)")
+                    print("ContentView: Setting UV intensity to: \(uvIntensity)")
+                    self.checkForSunscreenNotification(uvIntensity: uvIntensity)
                 } else {
-                    print("UV intensity data unavailable")
+                    print("ContentView: UV intensity is nil, showing --")
                 }
             }
         }
@@ -225,6 +230,61 @@ struct ContentView: View {
         print("Stopping UV intensity listener...")
         uvListener?.remove()
         uvListener = nil
+    }
+    
+    private func requestNotificationPermissions() {
+        print("Requesting notification permissions...")
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if let error = error {
+                print("Notification permission error: \(error.localizedDescription)")
+            } else if granted {
+                print("Notification permissions granted")
+            } else {
+                print("Notification permissions denied")
+            }
+        }
+    }
+    
+    private func checkForSunscreenNotification(uvIntensity: Int) {
+        // Check if UV intensity is 10 or higher
+        if uvIntensity >= 10 {
+            // Only send notification if we haven't already notified for this level
+            if lastNotifiedUVLevel != uvIntensity {
+                print("🌞 High UV intensity detected: \(uvIntensity). Sending sunscreen notification.")
+                lastNotifiedUVLevel = uvIntensity
+                sendSunscreenNotification(uvIntensity: uvIntensity)
+            }
+        } else {
+            // Reset the notified level when UV goes below 10
+            if lastNotifiedUVLevel != nil {
+                print("UV intensity dropped below 10. Resetting notification state.")
+                lastNotifiedUVLevel = nil
+            }
+        }
+    }
+    
+    private func sendSunscreenNotification(uvIntensity: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "🌞 Sunscreen Reminder"
+        content.body = "UV intensity is \(uvIntensity)! Please apply sunscreen to protect your skin from harmful UV rays."
+        content.sound = .default
+        content.badge = 1
+        
+        // Create immediate notification trigger
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        // Create unique identifier for this notification
+        let identifier = "sunscreen_reminder_\(uvIntensity)_\(Date().timeIntervalSince1970)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        // Add the notification
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule sunscreen notification: \(error.localizedDescription)")
+            } else {
+                print("Sunscreen notification scheduled successfully for UV level: \(uvIntensity)")
+            }
+        }
     }
 }
 
