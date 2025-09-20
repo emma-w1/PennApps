@@ -12,22 +12,6 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
-<<<<<<< HEAD:app/pennapps/Services/FirestoreManager.swift
-=======
-//user data swift data
-struct UserData {
-    let email: String
-    let age: String
-    let skinToneIndex: Int
-    let skinConditions: String
-    let baselineRiskScore: Double?
-    let baselineRiskCategory: String?
-    let finalRiskScore: Double?
-    let finalRiskCategory: String?
-}
-
-//manage firestore
->>>>>>> origin/main:app/pennapps/FirestoreManager.swift
 class FirestoreManager {
     static let shared = FirestoreManager()
     
