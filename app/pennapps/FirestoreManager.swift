@@ -87,21 +87,19 @@ class FirestoreManager {
         }
     }
     
-    //fetch latest UV from the database
     func fetchLatestUVIntensity(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Fetching latest UV intensity...")
         
-        // users/latest document
+        // users/latest document first
         db.collection("users").document("latest").getDocument { document, error in
             if let error = error {
                 print("Error fetching from users/latest: \(error.localizedDescription)")
                 self.fetchFromPublicUVCollection(completion: completion)
-                return
             } else if let document = document, document.exists {
                 let data = document.data()
                 print("FirestoreManager: Latest document data: \(data ?? [:])")
                 
-                // UV_raw field first, then fallback to uv_index
+                // Try UV_raw field first, then fallback to uv_index
                 let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
                 print("FirestoreManager: Retrieved UV intensity from users/latest: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
@@ -158,6 +156,38 @@ class FirestoreManager {
         }
         
         return listener
+    }
+    
+    func listenToLatestDocumentChanges(uvCompletion: @escaping (Int?) -> Void, isPressedCompletion: @escaping (Bool, Date?) -> Void) -> ListenerRegistration {
+        print("FirestoreManager: Setting up real-time listener for latest document...")
+        
+        return db.collection("users").document("latest").addSnapshotListener { documentSnapshot, error in
+            if let error = error {
+                print("Error listening to latest document: \(error.localizedDescription)")
+                uvCompletion(nil)
+                isPressedCompletion(false, nil)
+            } else if let document = documentSnapshot, document.exists {
+                let data = document.data()
+                print("FirestoreManager: Latest document data: \(data ?? [:])")
+                
+                // Extract UV intensity
+                let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
+                print("FirestoreManager: UV intensity: \(uvIntensity ?? -1)")
+                uvCompletion(uvIntensity)
+                
+                // Extract is_pressed and timestamp
+                let isPressed = data?["is_pressed"] as? Bool ?? false
+                let timestamp = data?["timestamp"] as? Timestamp
+                let date = timestamp?.dateValue()
+                
+                print("FirestoreManager: is_pressed: \(isPressed), timestamp: \(date?.description ?? "nil")")
+                isPressedCompletion(isPressed, date)
+            } else {
+                print("Latest document no longer exists")
+                uvCompletion(nil)
+                isPressedCompletion(false, nil)
+            }
+        }
     }
     
     private func setupPublicUVListener(completion: @escaping (Int?) -> Void) -> ListenerRegistration {

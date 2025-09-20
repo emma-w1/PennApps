@@ -17,6 +17,8 @@ struct ContentView: View {
     @State private var isLoadingUV = true
     @State private var uvListener: ListenerRegistration?
     @State private var lastNotifiedUVLevel: Int? = nil
+    @State private var lastAppliedDate: Date?
+    @State private var lastIsPressedState: Bool = false
     
     let skinTones: [Color] = [
         Color(red: 244/255, green: 208/255, blue: 177/255),
@@ -73,8 +75,18 @@ struct ContentView: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(.black)
                                 .multilineTextAlignment(.center)
-                            Text("Placeholder")
-                                .multilineTextAlignment(.center)
+                            
+                            if let lastAppliedDate = lastAppliedDate {
+                                Text(formatDate(lastAppliedDate))
+                                    .font(.body)
+                                    .foregroundColor(.black)
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                Text("Never")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .padding(.vertical, 20)
@@ -209,21 +221,40 @@ struct ContentView: View {
     }
     
     private func startUVIntensityListener() {
-        print("Starting UV intensity real-time listener...")
+        print("Starting UV intensity and is_pressed real-time listener...")
         
-        uvListener = FirestoreManager.shared.listenToUVIntensityChanges { uvIntensity in
-            DispatchQueue.main.async {
-                print("ContentView: Received UV intensity update: \(uvIntensity ?? -999)")
-                self.uvIntensity = uvIntensity
-                self.isLoadingUV = false
-                if let uvIntensity = uvIntensity {
-                    print("ContentView: Setting UV intensity to: \(uvIntensity)")
-                    self.checkForSunscreenNotification(uvIntensity: uvIntensity)
-                } else {
-                    print("ContentView: UV intensity is nil, showing --")
+        uvListener = FirestoreManager.shared.listenToLatestDocumentChanges(
+            uvCompletion: { uvIntensity in
+                DispatchQueue.main.async {
+                    print("ContentView: Received UV intensity update: \(uvIntensity ?? -999)")
+                    self.uvIntensity = uvIntensity
+                    self.isLoadingUV = false
+                    if let uvIntensity = uvIntensity {
+                        print("ContentView: Setting UV intensity to: \(uvIntensity)")
+                        self.checkForSunscreenNotification(uvIntensity: uvIntensity)
+                    } else {
+                        print("ContentView: UV intensity is nil, showing --")
+                    }
+                }
+            },
+            isPressedCompletion: { isPressed, date in
+                DispatchQueue.main.async {
+                    print("ContentView: Received is_pressed update: \(isPressed), date: \(date?.description ?? "nil")")
+                    
+                    // Check if is_pressed just became true (sunscreen applied)
+                    if isPressed && !self.lastIsPressedState {
+                        print("ContentView: Sunscreen applied! Sending notification.")
+                        self.sendSunscreenAppliedNotification()
+                        self.lastAppliedDate = date
+                    } else if isPressed && date != nil {
+                        // Update the date even if we already knew is_pressed was true
+                        self.lastAppliedDate = date
+                    }
+                    
+                    self.lastIsPressedState = isPressed
                 }
             }
-        }
+        )
     }
     
     private func stopUVIntensityListener() {
@@ -266,7 +297,7 @@ struct ContentView: View {
     private func sendSunscreenNotification(uvIntensity: Int) {
         let content = UNMutableNotificationContent()
         content.title = "🌞 Sunscreen Reminder"
-        content.body = "UV intensity is \(uvIntensity)! Please apply sunscreen to protect your skin from harmful UV rays."
+        content.body = "UV intensity is \(uvIntensity)! Please apply/re-apply sunscreen to protect your skin from harmful UV rays."
         content.sound = .default
         content.badge = 1
         
@@ -285,6 +316,37 @@ struct ContentView: View {
                 print("Sunscreen notification scheduled successfully for UV level: \(uvIntensity)")
             }
         }
+    }
+    
+    private func sendSunscreenAppliedNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "✅ Sunscreen Applied!"
+        content.body = "Great job! You've applied sunscreen to protect your skin."
+        content.sound = .default
+        content.badge = 1
+        
+        // Create immediate notification trigger
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        
+        // Create unique identifier for this notification
+        let identifier = "sunscreen_applied_\(Date().timeIntervalSince1970)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        // Add the notification
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Failed to schedule sunscreen applied notification: \(error.localizedDescription)")
+            } else {
+                print("Sunscreen applied notification scheduled successfully")
+            }
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
