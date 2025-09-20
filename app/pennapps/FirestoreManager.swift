@@ -32,23 +32,25 @@ class FirestoreManager {
         }
     }
     
-    func saveUserInfo(uid: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int) {
+    func saveUserInfo(uid: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int, severityScore: Int = 0) {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
+        print("FirestoreManager: Gemini Severity Score: \(severityScore)")
         
         let userData: [String: Any] = [
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
+            "conditionSeverity": severityScore,  // ← Gemini analysis result
             "createdAt": FieldValue.serverTimestamp()
         ]
         
-        print("FirestoreManager: Attempting to write to Firestore...")
+        print("FirestoreManager: Attempting to write to Firestore with Gemini data...")
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 print("Error writing user document: \(error.localizedDescription)")
             } else {
-                print("User data successfully written to Firestore!")
+                print("User data successfully written to Firestore with severity score: \(severityScore)!")
             }
         }
     }

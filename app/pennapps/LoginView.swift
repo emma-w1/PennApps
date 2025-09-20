@@ -76,11 +76,28 @@ struct LoginView: View {
                                                 }
                                                 .padding(.vertical, 5)
                                                 
-                            TextField("Pre-existing skin conditions", text: $skinConditions)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .frame(maxWidth: 300)
-
+                    VStack(alignment: .leading, spacing: 5) {
+                        TextField("Pre-existing skin conditions", text: $skinConditions)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(maxWidth: 300)
+                        
+                        Text("e.g., acne, eczema, sensitive skin (or \"none\" if no conditions)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: 300, alignment: .leading)
                     }
+                    
+                    // Show Gemini analysis progress
+                    if authManager.isAnalyzingSkinConditions {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                            Text("Analyzing skin condition severity with AI...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 5)
+                    }                    }
 //                    errors
                     if let errorMessage = authManager.errorMessage {
                         Text(errorMessage)
@@ -103,15 +120,22 @@ struct LoginView: View {
                             authManager.signIn(email: email, password: password)
                         }
                     }) {
-                        Text(isSignUp ? "Register" : "Log In")
-                            .frame(maxWidth: 300)
-                            .padding()
-                            .background(Color.yellow)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                            .font(.headline)
+                        HStack {
+                            if authManager.isAnalyzingSkinConditions {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                            Text(isSignUp ? (authManager.isAnalyzingSkinConditions ? "Analyzing..." : "Register") : "Log In")
+                        }
+                        .frame(maxWidth: 300)
+                        .padding()
+                        .background(Color.yellow)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .font(.headline)
                     }
-                    .disabled(isSignUp ? (email.isEmpty || password.isEmpty || age.isEmpty || selectedSkinToneIndex == 0) : (email.isEmpty || password.isEmpty))
+                    .disabled(authManager.isAnalyzingSkinConditions || (isSignUp ? (email.isEmpty || password.isEmpty || age.isEmpty || selectedSkinToneIndex == 0) : (email.isEmpty || password.isEmpty)))
                     
 //                    switch mode from sign in to sign up or vice versa
                     Button(action: {
