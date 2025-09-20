@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  LoginView.swift
 //  pennapps
 //
 //  Created by Adishree Das on 9/19/25.
@@ -7,9 +7,10 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct LoginView: View {
     var body: some View {
         NavigationStack {
+            Text("LOGIN SCREEN")
             Spacer()
             Navbar()
                 .frame(maxWidth: .infinity)
@@ -19,5 +20,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    LoginView()
 }
