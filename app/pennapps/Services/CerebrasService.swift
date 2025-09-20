@@ -1,6 +1,6 @@
 import Foundation
 
-enum GeminiError: Error {
+enum CerebrasError: Error {
     case invalidURL
     case noData
     case invalidResponse
@@ -23,22 +23,22 @@ enum GeminiError: Error {
     }
 }
 
-class GeminiService: ObservableObject {
-    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+class CerebrasService: ObservableObject {
+    private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
     private var apiKey: String? {
-        return Config.shared.getGeminiAPIKey()
+        return Config.shared.getCerebrasAPIKey()
     }
     
     init() {}
     
     func analyzeSkinConditionSeverity(conditions: String) async throws -> Int {
         guard let apiKey = apiKey else {
-            print("⚠️ No Gemini API key found, using fallback")
+            print("⚠️ No Cerebras API key found, using fallback")
             return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
         }
         
-        guard let url = URL(string: "\(baseURL)?key=\(apiKey)") else {
-            throw GeminiError.invalidURL
+        guard let url = URL(string: baseURL) else {
+            throw CerebrasError.invalidURL
         }
         
         let prompt = """
@@ -56,23 +56,26 @@ class GeminiService: ObservableObject {
         """
         
         let requestBody: [String: Any] = [
-            "contents": [
+            "model": "llama3.1-8b",
+            "messages": [
                 [
-                    "parts": [
-                        ["text": prompt]
-                    ]
+                    "role": "user",
+                    "content": prompt
                 ]
-            ]
+            ],
+            "max_tokens": 10,
+            "temperature": 0.1
         ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
-            throw GeminiError.requestFailed("Failed to encode request: \(error)")
+            throw CerebrasError.requestFailed("Failed to encode request: \(error)")
         }
         
         do {
@@ -80,31 +83,29 @@ class GeminiService: ObservableObject {
             
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
                 let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Gemini API Error (\(httpResponse.statusCode)): \(errorBody)")
+                print("❌ Cerebras API Error (\(httpResponse.statusCode)): \(errorBody)")
                 return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
             }
             
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let candidates = json["candidates"] as? [[String: Any]],
-                  let firstCandidate = candidates.first,
-                  let content = firstCandidate["content"] as? [String: Any],
-                  let parts = content["parts"] as? [[String: Any]],
-                  let firstPart = parts.first,
-                  let text = firstPart["text"] as? String else {
-                throw GeminiError.invalidResponse
+                  let choices = json["choices"] as? [[String: Any]],
+                  let firstChoice = choices.first,
+                  let message = firstChoice["message"] as? [String: Any],
+                  let content = message["content"] as? String else {
+                throw CerebrasError.invalidResponse
             }
             
-            let severityText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let severityText = content.trimmingCharacters(in: .whitespacesAndNewlines)
             if let severity = Int(severityText), severity >= 0 && severity <= 5 {
-                print("✅ Gemini analysis: '\(conditions)' → Severity: \(severity)")
+                print("✅ Cerebras analysis: '\(conditions)' → Severity: \(severity)")
                 return severity
             } else {
-                print("⚠️ Invalid Gemini response: '\(severityText)', using fallback")
+                print("⚠️ Invalid Cerebras response: '\(severityText)', using fallback")
                 return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
             }
             
         } catch {
-            print("❌ Gemini request failed: \(error), using fallback")
+            print("❌ Cerebras request failed: \(error), using fallback")
             return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
         }
     }
@@ -129,12 +130,12 @@ class GeminiService: ObservableObject {
     
     func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
         guard let apiKey = apiKey else {
-            print("⚠️ No Gemini API key found, using fallback")
+            print("⚠️ No Cerebras API key found, using fallback")
             return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
         }
         
-        guard let url = URL(string: "\(baseURL)?key=\(apiKey)") else {
-            throw GeminiError.invalidURL
+        guard let url = URL(string: baseURL) else {
+            throw CerebrasError.invalidURL
         }
         
         let conditionsString = skinConditions.joined(separator: ", ")
@@ -152,23 +153,26 @@ class GeminiService: ObservableObject {
         """
         
         let requestBody: [String: Any] = [
-            "contents": [
+            "model": "llama3.1-8b",
+            "messages": [
                 [
-                    "parts": [
-                        ["text": prompt]
-                    ]
+                    "role": "user",
+                    "content": prompt
                 ]
-            ]
+            ],
+            "max_tokens": 200,
+            "temperature": 0.7
         ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
-            throw GeminiError.requestFailed("Failed to encode request: \(error)")
+            throw CerebrasError.requestFailed("Failed to encode request: \(error)")
         }
         
         do {
@@ -176,25 +180,23 @@ class GeminiService: ObservableObject {
             
             if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
                 let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Gemini API Error (\(httpResponse.statusCode)): \(errorBody)")
+                print("❌ Cerebras API Error (\(httpResponse.statusCode)): \(errorBody)")
                 return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
             }
             
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let candidates = json["candidates"] as? [[String: Any]],
-                  let firstCandidate = candidates.first,
-                  let content = firstCandidate["content"] as? [String: Any],
-                  let parts = content["parts"] as? [[String: Any]],
-                  let firstPart = parts.first,
-                  let text = firstPart["text"] as? String else {
-                throw GeminiError.invalidResponse
+                  let choices = json["choices"] as? [[String: Any]],
+                  let firstChoice = choices.first,
+                  let message = firstChoice["message"] as? [String: Any],
+                  let content = message["content"] as? String else {
+                throw CerebrasError.invalidResponse
             }
             
-            print("✅ Gemini summary generated successfully")
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+            print("✅ Cerebras summary generated successfully")
+            return content.trimmingCharacters(in: .whitespacesAndNewlines)
             
         } catch {
-            print("❌ Gemini request failed: \(error), using fallback")
+            print("❌ Cerebras request failed: \(error), using fallback")
             return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
         }
     }
