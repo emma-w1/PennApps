@@ -12,6 +12,13 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+struct UserData {
+    let email: String
+    let age: String
+    let skinToneIndex: Int
+    let skinConditions: String
+}
+
 class FirestoreManager {
     static let shared = FirestoreManager()
     
@@ -32,12 +39,33 @@ class FirestoreManager {
         }
     }
     
-    func saveUserInfo(uid: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int, severityScore: Int = 0) {
+    func fetchUserData(uid: String, completion: @escaping (UserData?) -> Void) {
+        db.collection("users").document(uid).getDocument { document, error in
+            if let error = error {
+                print("Error fetching user data: \(error.localizedDescription)")
+                completion(nil)
+            } else if let document = document, document.exists {
+                let data = document.data()
+                let userData = UserData(
+                    email: data?["email"] as? String ?? "",
+                    age: data?["age"] as? String ?? "",
+                    skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
+                    skinConditions: data?["skinConditions"] as? String ?? ""
+                )
+                completion(userData)
+            } else {
+                print("User document does not exist")
+                completion(nil)
+            }
+        }
+    }
+    
+    func saveUserInfo(uid: String, email: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int) {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
-        print("FirestoreManager: Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
-        print("FirestoreManager: Gemini Severity Score: \(severityScore)")
+        print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)"
         
         let userData: [String: Any] = [
+            "email": email,
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
