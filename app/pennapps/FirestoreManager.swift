@@ -60,9 +60,9 @@ class FirestoreManager {
         }
     }
     
-    func saveUserInfo(uid: String, email: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int) {
+    func saveUserInfo(uid: String, email: String, age: String, skinTone: Color, conditions: String, skinToneIndex: Int, severityScore: Int) {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
-        print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)"
+        print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
         
         let userData: [String: Any] = [
             "email": email,
@@ -79,6 +79,25 @@ class FirestoreManager {
                 print("Error writing user document: \(error.localizedDescription)")
             } else {
                 print("User data successfully written to Firestore with severity score: \(severityScore)!")
+            }
+        }
+    }
+    
+    func fetchLatestUVIndex(completion: @escaping (Int?) -> Void) {
+        print("FirestoreManager: Fetching latest UV index...")
+        
+        db.collection("users").document("latest").getDocument { document, error in
+            if let error = error {
+                print("Error fetching latest UV index: \(error.localizedDescription)")
+                completion(nil)
+            } else if let document = document, document.exists {
+                let data = document.data()
+                let uvIndex = data?["uv_index"] as? Int
+                print("FirestoreManager: Retrieved UV index: \(uvIndex ?? -1)")
+                completion(uvIndex)
+            } else {
+                print("Latest document does not exist")
+                completion(nil)
             }
         }
     }
