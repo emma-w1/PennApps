@@ -119,16 +119,16 @@ class AuthManager: ObservableObject {
                     self?.errorMessage = nil
                     print("Sign up successful")
                     
-                    // Test Firestore connection first
-                    print("Testing Firestore connection...")
-                    FirestoreManager.shared.testConnection()
                     
+                    // Save additional user data to Firestore if provided
+                    print("Attempting to save user data - Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(skinConditions)")
                     // Save user data with Gemini severity score
                     print("Saving user data with severity score: \(severityScore)")
                     if !age.isEmpty || skinToneIndex > 0 || !skinConditions.isEmpty {
                         print("Calling FirestoreManager to save data with Gemini analysis...")
                         FirestoreManager.shared.saveUserInfo(
                             uid: uid,
+                            email: email,
                             age: age,
                             skinTone: skinTone,
                             conditions: skinConditions,
