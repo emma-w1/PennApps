@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MainAppView: View {
     @StateObject private var authManager = AuthManager()
-    @State private var hasTestedGemini = false
+    @State private var hasTestedCerebras = false
     
     var body: some View {
             
@@ -22,32 +22,32 @@ struct MainAppView: View {
                     LoginView()
                 }
             }
-            .background(Color(red: 255/255, green: 247/255, blue: 217/255))
+            .background(Color.appBackground)
             .environmentObject(authManager)
             .onAppear {
-                // Test Gemini integration safely after view appears
-                if !hasTestedGemini {
-                    hasTestedGemini = true
-                    testGeminiIntegration()
+                // Test Cerebras integration safely after view appears
+                if !hasTestedCerebras {
+                    hasTestedCerebras = true
+                    testCerebrasIntegration()
                 }
             }
     }
     
-    private func testGeminiIntegration() {
+    private func testCerebrasIntegration() {
         Task {
-            print("🧪 Testing Gemini Integration...")
+            print("🧪 Testing Cerebras Integration...")
             
             let config = Config.shared
             print(config.getConfigurationStatus())
             
-            let gemini = GeminiService()
+            let cerebras = CerebrasService()
             
             // Test a few quick cases
             let testCases = ["none", "acne"]
             
             for testCase in testCases {
                 do {
-                    let result = try await gemini.analyzeSkinConditionSeverity(conditions: testCase)
+                    let result = try await cerebras.analyzeSkinConditionSeverity(conditions: testCase)
                     print("✅ Test: '\(testCase)' → Severity: \(result)")
                 } catch {
                     print("❌ Test failed for '\(testCase)': \(error)")
