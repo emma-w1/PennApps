@@ -69,6 +69,62 @@ class User:
             "Risk Category": risk_category
         }
 
+def calculate_baseline_risk_score(skin_tone_index, age):
+    """
+    Calculate baseline risk score using only skin tone (Fitzpatrick phototype) and age.
+    This represents the user's inherent risk without considering skin conditions.
+    """
+    # Convert skin tone index to Fitzpatrick phototype (1-6)
+    phototype = skin_tone_index if 1 <= skin_tone_index <= 6 else 1
+    
+    # Create user with no skin conditions (severity = 0)
+    user = User(phototype, age, 0)
+    result = user.calculate_erythemal_risk_score()
+    
+    return {
+        "baseline_risk_score": result['ERS'],
+        "baseline_risk_category": result['Risk Category'],
+        "phototype": phototype,
+        "age": age,
+        "ref": result['REF'],
+        "age_modifier": result['Age Modifier']
+    }
+
+def calculate_final_risk_score(skin_tone_index, age, severity_score):
+    """
+    Calculate final risk score including skin tone, age, and skin condition severity.
+    This represents the user's complete risk profile.
+    """
+    # Convert skin tone index to Fitzpatrick phototype (1-6)
+    phototype = skin_tone_index if 1 <= skin_tone_index <= 6 else 1
+    
+    # Create user with all factors
+    user = User(phototype, age, severity_score)
+    result = user.calculate_erythemal_risk_score()
+    
+    return {
+        "final_risk_score": result['ERS'],
+        "final_risk_category": result['Risk Category'],
+        "phototype": phototype,
+        "age": age,
+        "severity_score": severity_score,
+        "ref": result['REF'],
+        "age_modifier": result['Age Modifier'],
+        "condition_modifier": result['Condition Modifier']
+    }
+
+def calculate_user_risk_profile(skin_tone_index, age, severity_score):
+    """
+    Calculate both baseline and final risk scores for a complete user profile.
+    """
+    baseline = calculate_baseline_risk_score(skin_tone_index, age)
+    final = calculate_final_risk_score(skin_tone_index, age, severity_score)
+    
+    return {
+        "baseline": baseline,
+        "final": final
+    }
+
 if __name__ == "__main__":
     print("Fitzpatrick Phototype : ", end="")
     phototype = int(input().strip())
@@ -89,3 +145,13 @@ if __name__ == "__main__":
     print(f"Risk Category: {result['Risk Category']}")
     print(f"User's stored risk score: {user.risk_score:.2f}")
     print(f"User's severity score: {user.severity_score}")
+    
+    # Test the new functions
+    print("\n--- Testing New Functions ---")
+    baseline_result = calculate_baseline_risk_score(phototype, age)
+    final_result = calculate_final_risk_score(phototype, age, severity_input)
+    
+    print(f"Baseline Risk Score: {baseline_result['baseline_risk_score']:.2f}")
+    print(f"Baseline Risk Category: {baseline_result['baseline_risk_category']}")
+    print(f"Final Risk Score: {final_result['final_risk_score']:.2f}")
+    print(f"Final Risk Category: {final_result['final_risk_category']}")

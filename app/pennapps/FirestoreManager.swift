@@ -18,7 +18,10 @@ struct UserData {
     let age: String
     let skinToneIndex: Int
     let skinConditions: String
-    let riskScoreBaseline: String?
+    let baselineRiskScore: Double?
+    let baselineRiskCategory: String?
+    let finalRiskScore: Double?
+    let finalRiskCategory: String?
 }
 
 //manage firestore
@@ -56,7 +59,10 @@ class FirestoreManager {
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
                     skinConditions: data?["skinConditions"] as? String ?? "",
-                    riskScoreBaseline: data?["baseline_risk_category"] as? String
+                    baselineRiskScore: data?["baseline_risk_score"] as? Double,
+                    baselineRiskCategory: data?["baseline_risk_category"] as? String,
+                    finalRiskScore: data?["final_risk_score"] as? Double,
+                    finalRiskCategory: data?["final_risk_category"] as? String
                 )
                 completion(userData)
             } else {
@@ -71,22 +77,44 @@ class FirestoreManager {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
         
+        // Calculate risk scores using Python service
+        let riskService = RiskCalculationService.shared
+        let ageInt = Int(age) ?? 0
+        
+        // Calculate baseline risk score (without skin conditions)
+        let baselineResult = riskService.calculateBaselineRiskScore(skinToneIndex: skinToneIndex, age: ageInt)
+        let baselineRiskScore = baselineResult["baseline_risk_score"] as? Double ?? 0.0
+        let baselineRiskCategory = baselineResult["baseline_risk_category"] as? String ?? "Unknown"
+        
+        // Calculate final risk score (with skin conditions)
+        let finalResult = riskService.calculateFinalRiskScore(skinToneIndex: skinToneIndex, age: ageInt, severityScore: severityScore)
+        let finalRiskScore = finalResult["final_risk_score"] as? Double ?? 0.0
+        let finalRiskCategory = finalResult["final_risk_category"] as? String ?? "Unknown"
+        
         let userData: [String: Any] = [
             "email": email,
             "age": age,
             "skinToneIndex": skinToneIndex,
             "skinConditions": conditions,
-            "conditionSeverity": severityScore,  
-            "createdAt": FieldValue.serverTimestamp()
+            "conditionSeverity": severityScore,
+            "baseline_risk_score": baselineRiskScore,
+            "baseline_risk_category": baselineRiskCategory,
+            "final_risk_score": finalRiskScore,
+            "final_risk_category": finalRiskCategory,
+            "createdAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
         ]
         
         //prints specific gemini value for skin conditoin severity
-        print("FirestoreManager: Attempting to write to Firestore with Gemini data...")
+        print("FirestoreManager: Attempting to write to Firestore with Gemini data and risk scores...")
+        print("FirestoreManager: Baseline Risk Score: \(baselineRiskScore), Category: \(baselineRiskCategory)")
+        print("FirestoreManager: Final Risk Score: \(finalRiskScore), Category: \(finalRiskCategory)")
+        
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 print("Error writing user document: \(error.localizedDescription)")
             } else {
-                print("User data successfully written to Firestore with severity score: \(severityScore)!")
+                print("User data successfully written to Firestore with severity score: \(severityScore) and risk scores!")
             }
         }
     }

@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var isLoading = true
     @State private var isSaving = false
     @State private var showSuccessMessage = false
+    @FocusState private var isTextFieldFocused: Bool
     
     // Editable fields
     @State private var age: String = ""
@@ -62,6 +63,10 @@ struct SettingsView: View {
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .keyboardType(.numberPad)
                                 .frame(maxWidth: 300)
+                                .focused($isTextFieldFocused)
+                                .onSubmit {
+                                    isTextFieldFocused = false
+                                }
                         }
                         
                         // skin tones
@@ -108,6 +113,10 @@ struct SettingsView: View {
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .lineLimit(3...6)
                                 .frame(maxWidth: 300)
+                                .focused($isTextFieldFocused)
+                                .onSubmit {
+                                    isTextFieldFocused = false
+                                }
                             
                             Text("Describe any skin conditions or write \"none\" if you have no conditions")
                                 .font(.caption)
@@ -162,6 +171,10 @@ struct SettingsView: View {
             }
         }
         .background(Color(red: 255/255, green: 247/255, blue: 217/255).ignoresSafeArea())
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text fields
+            isTextFieldFocused = false
+        }
         .onAppear {
             fetchUserData()
         }
