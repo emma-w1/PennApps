@@ -16,6 +16,10 @@ class AuthManager: ObservableObject {
     @Published var user: User?
     @Published var errorMessage: String?
     @Published var isLoading = true
+    @Published var isAnalyzingSkinConditions = false
+    
+    // Gemini service for skin condition analysis
+    private let geminiService = GeminiService()
     
     init() {
     //authentication changes
@@ -49,7 +53,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-//    sign up
+//    sign up with Gemini skin condition analysis
     func signUp(email: String, password: String, age: String = "", skinTone: Color = .clear, skinConditions: String = "", skinToneIndex: Int = 0) {
         guard !email.isEmpty && !password.isEmpty else {
             errorMessage = "Please enter both email and password"
@@ -60,6 +64,51 @@ class AuthManager: ObservableObject {
             errorMessage = "Password must be at least 6 characters"
             return
         }
+        
+        // Start analyzing skin conditions with Gemini
+        isAnalyzingSkinConditions = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                // Step 1: Analyze skin conditions with Gemini
+                let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
+                print("✅ Gemini Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
+                
+                // Step 2: Continue with Firebase registration on main thread
+                await MainActor.run {
+                    self.isAnalyzingSkinConditions = false
+                    self.createFirebaseUser(
+                        email: email,
+                        password: password,
+                        age: age,
+                        skinTone: skinTone,
+                        skinConditions: skinConditions,
+                        skinToneIndex: skinToneIndex,
+                        severityScore: severityScore
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    self.isAnalyzingSkinConditions = false
+                    print("⚠️ Gemini analysis failed: \(error.localizedDescription)")
+                    // Continue with default severity score of 1 if Gemini fails
+                    self.createFirebaseUser(
+                        email: email,
+                        password: password,
+                        age: age,
+                        skinTone: skinTone,
+                        skinConditions: skinConditions,
+                        skinToneIndex: skinToneIndex,
+                        severityScore: 1
+                    )
+                }
+            }
+        }
+    }
+    
+    // Step 2: Create Firebase user with severity score
+    private func createFirebaseUser(email: String, password: String, age: String, skinTone: Color, skinConditions: String, skinToneIndex: Int, severityScore: Int) {
         
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
             DispatchQueue.main.async {
@@ -74,16 +123,17 @@ class AuthManager: ObservableObject {
                     print("Testing Firestore connection...")
                     FirestoreManager.shared.testConnection()
                     
-                    // Save additional user data to Firestore if provided
-                    print("Attempting to save user data - Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(skinConditions)")
+                    // Save user data with Gemini severity score
+                    print("Saving user data with severity score: \(severityScore)")
                     if !age.isEmpty || skinToneIndex > 0 || !skinConditions.isEmpty {
-                        print("Calling FirestoreManager to save data...")
+                        print("Calling FirestoreManager to save data with Gemini analysis...")
                         FirestoreManager.shared.saveUserInfo(
                             uid: uid,
                             age: age,
                             skinTone: skinTone,
                             conditions: skinConditions,
-                            skinToneIndex: skinToneIndex
+                            skinToneIndex: skinToneIndex,
+                            severityScore: severityScore  // ← Gemini result goes to Firebase
                         )
                     } else {
                         print("No additional data to save")
