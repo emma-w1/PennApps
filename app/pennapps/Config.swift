@@ -273,20 +273,20 @@ class GeminiService: ObservableObject {
         }
         
         let prompt = """
-        Create a personalized skin care summary and UV protection tips for a user with the following profile:
+        Create a personalized skin care summary using this EXACT format:
         
-        Age: \(age) years old
-        Skin Conditions: \(skinConditions)
-        UV Risk Score: \(severityScore)/5 (where 0=no risk, 5=severe risk)
+        "Your baseline risk score is [RISK_SCORE]. This is affected by your age ([AGE]), past skin history of [SKIN_CONDITIONS], and your [SKIN_TONE] skin. These factors affect your risk through [EXPLAIN_AGE_IMPACT], [EXPLAIN_CONDITION_IMPACT], and [EXPLAIN_SKIN_TONE_IMPACT]. 
         
-        Please provide:
-        1. A brief summary of their skin profile
-        2. Specific UV protection recommendations based on their age and conditions
-        3. 3-4 actionable skincare tips
-        4. Any specific precautions for their skin conditions
+        Advice: [SPECIFIC_PRODUCT_RECOMMENDATIONS]. [ADDITIONAL_PRACTICAL_TIPS]. 🌞"
         
-        Keep the response under 300 words, friendly, and practical. Use emojis to make it engaging.
-        Format with clear sections but don't use markdown headers.
+        User Profile:
+        - Age: \(age) years old
+        - Skin Conditions: \(skinConditions)
+        - Skin Tone Index: \(skinToneIndex) (1=very light, 6=very dark)
+        - Baseline Risk Score: \(riskScoreBaseline ?? "Unknown")
+        - UV Risk Score: \(severityScore)/5
+        
+        Fill in the brackets with appropriate information. Keep it to 1-2 short paragraphs maximum. Be specific about how each factor affects their risk.
         """
         
         let requestBody: [String: Any] = [
@@ -337,7 +337,7 @@ class GeminiService: ObservableObject {
     private func generateFallbackSummary(age: String, skinConditions: String, severityScore: Int, riskScoreBaseline: String?, skinToneIndex: Int) -> String {
         let ageInt = Int(age) ?? 0
         let cleanedConditions = skinConditions.trimmingCharacters(in: .whitespacesAndNewlines)
-        let baselineRisk = riskScoreBaseline ?? "Unknown"
+        let baselineRisk = riskScoreBaseline ?? "Low (not yet calculated)"
         
         // Determine skin tone description
         let skinToneDescription: String
@@ -393,18 +393,9 @@ class GeminiService: ObservableObject {
         
         // Generate shorter, formatted summary
         let summary = """
-        Your baseline risk score is **\(baselineRisk)**. This is affected by your age (\(ageInt)), past skin history of **\(conditionHistory)**, and your **\(skinToneDescription)**.
+        Your baseline risk score is \(baselineRisk). This is affected by your age (\(ageInt)), past skin history of \(conditionHistory), and your \(skinToneDescription). These factors affect your risk through \(ageImpact), \(conditionHistory == "no significant skin conditions" ? "no conditions keeping risk lower" : "conditions increasing susceptibility"), and \(toneImpact). 
         
-        **How each factor affects your risk:**
-        • **Age:** Your \(ageImpact)
-        • **Skin Conditions:** \(conditionHistory == "no significant skin conditions" ? "No conditions keep risk lower" : "Conditions increase susceptibility")
-        • **Skin Tone:** Your \(toneImpact)
-        
-        **UV Impact:** With severity \(severityScore)/5, \(severityScore >= 3 ? "extra caution needed" : "standard protection sufficient")
-        
-        **Recommended Products:** \(productRec)
-        
-        Reapply sunscreen every 2 hours! 🌞
+        Advice: \(productRec). Reapply every 2 hours and seek shade during peak UV hours (10 AM - 4 PM). 🌞
         """
         
         print("✅ Personalized Risk Summary Generated - Baseline: \(baselineRisk), Age: \(age), Conditions: \(skinConditions), Skin Tone: \(skinToneIndex)")
