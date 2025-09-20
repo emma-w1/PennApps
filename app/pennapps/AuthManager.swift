@@ -50,7 +50,7 @@ class AuthManager: ObservableObject {
     }
     
 //    sign up
-    func signUp(email: String, password: String) {
+    func signUp(email: String, password: String, age: String = "", skinTone: Color = .clear, skinConditions: String = "", skinToneIndex: Int = 0) {
         guard !email.isEmpty && !password.isEmpty else {
             errorMessage = "Please enter both email and password"
             return
@@ -66,9 +66,30 @@ class AuthManager: ObservableObject {
                 if let error = error {
                     self?.errorMessage = error.localizedDescription
                     print("Sign up error: \(error.localizedDescription)")
-                } else {
+                } else if let uid = result?.user.uid {
                     self?.errorMessage = nil
                     print("Sign up successful")
+                    
+                    // Test Firestore connection first
+                    print("Testing Firestore connection...")
+                    FirestoreManager.shared.testConnection()
+                    
+                    // Save additional user data to Firestore if provided
+                    print("Attempting to save user data - Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(skinConditions)")
+                    if !age.isEmpty || skinToneIndex > 0 || !skinConditions.isEmpty {
+                        print("Calling FirestoreManager to save data...")
+                        FirestoreManager.shared.saveUserInfo(
+                            uid: uid,
+                            age: age,
+                            skinTone: skinTone,
+                            conditions: skinConditions,
+                            skinToneIndex: skinToneIndex
+                        )
+                    } else {
+                        print("No additional data to save")
+                    }
+                } else {
+                    self?.errorMessage = "An unexpected error occured"
                 }
             }
         }

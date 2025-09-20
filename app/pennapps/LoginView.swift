@@ -15,6 +15,7 @@ struct LoginView: View {
     
     @State private var age = ""
     @State private var selectedSkinTone: Color = .clear
+    @State private var selectedSkinToneIndex: Int = 0
     @State private var skinConditions = ""
     
     let skinTones: [Color] = [
@@ -58,16 +59,17 @@ struct LoginView: View {
                                 .foregroundColor(.secondary)
                                                     
                             HStack(spacing: 15) {
-                            ForEach(skinTones, id: \.self) { tone in
+                            ForEach(Array(skinTones.enumerated()), id: \.offset) { index, tone in
                                 Circle()
                                     .fill(tone)
                                     .frame(width: 40, height: 40)
                                     .overlay(
                                     Circle()
-                                        .stroke(selectedSkinTone == tone ? Color.yellow : Color.clear, lineWidth: 3)
+                                        .stroke(selectedSkinToneIndex == index + 1 ? Color.yellow : Color.clear, lineWidth: 3)
                                                 )
                                     .onTapGesture {
                                     selectedSkinTone = tone
+                                    selectedSkinToneIndex = index + 1
                             }
                                                         }
                                                     }
@@ -89,7 +91,14 @@ struct LoginView: View {
 //                    sign up/sign in button
                     Button(action: {
                         if isSignUp {
-                            authManager.signUp(email: email, password: password)
+                            authManager.signUp(
+                                email: email, 
+                                password: password, 
+                                age: age, 
+                                skinTone: selectedSkinTone, 
+                                skinConditions: skinConditions,
+                                skinToneIndex: selectedSkinToneIndex
+                            )
                         } else {
                             authManager.signIn(email: email, password: password)
                         }
@@ -102,7 +111,7 @@ struct LoginView: View {
                             .cornerRadius(8)
                             .font(.headline)
                     }
-                    .disabled(email.isEmpty || password.isEmpty)
+                    .disabled(isSignUp ? (email.isEmpty || password.isEmpty || age.isEmpty || selectedSkinToneIndex == 0) : (email.isEmpty || password.isEmpty))
                     
 //                    switch mode from sign in to sign up or vice versa
                     Button(action: {
