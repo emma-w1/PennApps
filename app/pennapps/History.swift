@@ -18,7 +18,6 @@ struct History: View {
                 Spacer()
             }
         }
-        .background(Color(red: 255/255, green: 247/255, blue: 217/255))
     }
 }
 

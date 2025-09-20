@@ -8,20 +8,122 @@
 import SwiftUI
 
 struct LoginView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isSignUp = false
+    
+    @State private var age = ""
+    @State private var selectedSkinTone: Color = .clear
+    @State private var skinConditions = ""
+    
+    let skinTones: [Color] = [
+        Color(red: 244/255, green: 208/255, blue: 177/255),
+        Color(red: 231/255, green: 180/255, blue: 143/255),
+        Color(red: 210/255, green: 159/255, blue: 124/255),
+        Color(red: 186/255, green: 120/255, blue: 81/255),
+        Color(red: 165/255, green: 94/255, blue: 43/255),
+        Color(red: 60/255, green: 31/255, blue: 29/255)
+    ]
+    
     var body: some View {
         NavigationStack {
-            VStack {
-                Spacer()
-                Text("LOGIN SCREEN")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                Spacer()
-            }
+                //email and login form slots
+                VStack(spacing: 10) {
+                    Image("Soliss")
+                        .padding(.vertical, 0)
+                    
+                    TextField("Email", text: $email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .autocapitalization(.none)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .padding(.top, 0)
+                        .frame(maxWidth: 300)
+                    
+                    SecureField("Password", text: $password)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .frame(maxWidth: 300)
+                    
+//                    new registration
+                    if isSignUp {
+                        TextField("Age", text: $age)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .keyboardType(.numberPad)
+                            .frame(maxWidth: 300)
+                                                
+                        VStack(alignment: .leading) {
+                            Text("Select your skin tone:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                                    
+                            HStack(spacing: 15) {
+                            ForEach(skinTones, id: \.self) { tone in
+                                Circle()
+                                    .fill(tone)
+                                    .frame(width: 40, height: 40)
+                                    .overlay(
+                                    Circle()
+                                        .stroke(selectedSkinTone == tone ? Color.yellow : Color.clear, lineWidth: 3)
+                                                )
+                                    .onTapGesture {
+                                    selectedSkinTone = tone
+                            }
+                                                        }
+                                                    }
+                                                }
+                                                .padding(.vertical, 5)
+                                                
+                            TextField("Pre-existing skin conditions", text: $skinConditions)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .frame(maxWidth: 300)
+
+                    }
+//                    errors
+                    if let errorMessage = authManager.errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                    
+//                    sign up/sign in button
+                    Button(action: {
+                        if isSignUp {
+                            authManager.signUp(email: email, password: password)
+                        } else {
+                            authManager.signIn(email: email, password: password)
+                        }
+                    }) {
+                        Text(isSignUp ? "Register" : "Log In")
+                            .frame(maxWidth: 300)
+                            .padding()
+                            .background(Color.yellow)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                            .font(.headline)
+                    }
+                    .disabled(email.isEmpty || password.isEmpty)
+                    
+//                    switch mode from sign in to sign up or vice versa
+                    Button(action: {
+                        isSignUp.toggle()
+                        authManager.errorMessage = nil
+                    }) {
+                        Text(isSignUp ? "Already have an account? Log In" : "Don't have an account? Register")
+                            .font(.caption)
+                            .foregroundColor(Color(red: 161/255, green: 114/255, blue: 14/255))
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 100)
+                
         }
-        .background(Color(red: 255/255, green: 247/255, blue: 217/255))
     }
 }
 
+
 #Preview {
     LoginView()
+        .environmentObject(AuthManager())
 }

@@ -23,7 +23,6 @@ struct Navbar: View {
                     Text("History")
                 }
                 .tag(1)
-            
                 
             SettingsView()
                 .tabItem {
@@ -32,7 +31,7 @@ struct Navbar: View {
                 }
                 .tag(2)
         }
-        .accentColor(Color(red: 122/255, green: 92/255, blue: 0)) 
+        .accentColor(Color(red: 161/255, green: 114/255, blue: 14/255)) 
     }
 }
 
