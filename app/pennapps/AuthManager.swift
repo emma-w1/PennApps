@@ -68,13 +68,12 @@ class AuthManager: ObservableObject {
         isAnalyzingSkinConditions = true
         errorMessage = nil
         
+//gemini skin condition analysis
         Task {
             do {
-                // Step 1: Analyze skin conditions with Gemini
                 let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
                 print("✅ Gemini Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
                 
-                // Step 2: Continue with Firebase registration on main thread
                 await MainActor.run {
                     self.isAnalyzingSkinConditions = false
                     self.createFirebaseUser(
@@ -106,7 +105,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Step 2: Create Firebase user with severity score
+    // create a new firebase user w/ specified score
     private func createFirebaseUser(email: String, password: String, age: String, skinTone: Color, skinConditions: String, skinToneIndex: Int, severityScore: Int) {
         
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
@@ -118,10 +117,7 @@ class AuthManager: ObservableObject {
                     self?.errorMessage = nil
                     print("Sign up successful")
                     
-                    
-                    // Save additional user data to Firestore if provided
                     print("Attempting to save user data - Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(skinConditions)")
-                    // Save user data with Gemini severity score
                     print("Saving user data with severity score: \(severityScore)")
                     if !age.isEmpty || skinToneIndex > 0 || !skinConditions.isEmpty {
                         print("Calling FirestoreManager to save data with Gemini analysis...")
@@ -132,7 +128,7 @@ class AuthManager: ObservableObject {
                             skinTone: skinTone,
                             conditions: skinConditions,
                             skinToneIndex: skinToneIndex,
-                            severityScore: severityScore  // ← Gemini result goes to Firebase
+                            severityScore: severityScore
                         )
                     } else {
                         print("No additional data to save")

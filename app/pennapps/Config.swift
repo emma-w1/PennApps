@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 /// Comprehensive configuration manager for app settings and API keys
+/// makes sensitive .env file available to app parts
 class Config {
     static let shared = Config()
     
@@ -10,8 +11,6 @@ class Config {
     private init() {
         loadEnvironmentVariables()
     }
-    
-    // MARK: - Environment Loading
     
     /// Load environment variables from .env file
     private func loadEnvironmentVariables() {
@@ -61,7 +60,6 @@ class Config {
         print("📱 Loaded environment variables from process environment")
     }
     
-    // MARK: - Secure Key Access
     
     /// Securely get API key with validation
     private func getAPIKey(_ key: String) -> String? {
@@ -76,9 +74,7 @@ class Config {
         
         return nil
     }
-    
-    // MARK: - Gemini Configuration
-    
+        
     /// Get Gemini API Key
     var geminiAPIKey: String? {
         return getAPIKey("GEMINI_API_KEY")
@@ -88,18 +84,14 @@ class Config {
     var hasValidGeminiKey: Bool {
         return geminiAPIKey != nil
     }
-    
-    // MARK: - App Configuration
-    
+        
     /// Initialize app configurations
     func initializeApp() {
         print("🚀 Initializing app configuration...")
         print(getConfigurationStatus())
         print("✅ App configuration completed")
     }
-    
-    // MARK: - Debug & Status
-    
+        
     /// Get comprehensive configuration status for debugging
     func getConfigurationStatus() -> String {
         var status = "🔐 App Configuration Status:\n"
@@ -148,8 +140,6 @@ class Config {
         }
     }
 }
-
-// MARK: - Gemini Service Integration
 
 /// Gemini service using the unified configuration
 class GeminiService: ObservableObject {
@@ -343,9 +333,7 @@ class GeminiService: ObservableObject {
         print("✅ Gemini Summary Generated for age \(age), conditions: \(skinConditions)")
         return summary
     }
-    
-    // MARK: - Fallback Summary Generation
-    
+        
     private func generateFallbackSummary(age: String, skinConditions: String, severityScore: Int) -> String {
         let ageInt = Int(age) ?? 0
         let cleanedConditions = skinConditions.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

@@ -5,11 +5,14 @@
 //  Created by Adishree Das on 9/19/25.
 //
 
+// main home page
+
 import SwiftUI
 import FirebaseFirestore
 import UserNotifications
 
 struct ContentView: View {
+    //all user data / sensor data needed
     @EnvironmentObject var authManager: AuthManager
     @State private var userData: UserData?
     @State private var isLoading = true
@@ -25,6 +28,7 @@ struct ContentView: View {
     
     private let geminiService = GeminiService()
     
+    //possible skin tones to pick from
     let skinTones: [Color] = [
         Color(red: 244/255, green: 208/255, blue: 177/255),
         Color(red: 231/255, green: 180/255, blue: 143/255),
@@ -36,134 +40,20 @@ struct ContentView: View {
     
     var body: some View {
         NavigationStack {
+            //topbar
             Topbar()
-                .padding(.horizontal, 0)
                 .padding(.top, 0)
-                .padding(.bottom, 10)
             
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 20){
                     HStack(spacing: 16) {
-                        VStack (alignment: .center, spacing: 10) {
-                            Text("Current UV Intensity")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .multilineTextAlignment(.center)
-                            
-                            if isLoadingUV {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else if let uvIntensity = uvIntensity {
-                                Text("\(uvIntensity)")
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(uvIntensity >= 10 ? .red : .black)
-                            } else {
-                                Text("--")
-                                    .font(.largeTitle)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 120)
-                        .padding(.vertical, 20)
-                        .padding(.horizontal, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
-                        )
-                        
-                        VStack (alignment: .center, spacing: 10) {
-                            Text("Last Applied")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.black)
-                                .multilineTextAlignment(.center)
-                            
-                            if let lastAppliedDate = lastAppliedDate {
-                                Text(formatDate(lastAppliedDate))
-                                    .font(.body)
-                                    .foregroundColor(.black)
-                                    .multilineTextAlignment(.center)
-                            } else {
-                                Text("Never")
-                                    .font(.body)
-                                    .foregroundColor(.gray)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 120)
-                        .padding(.vertical, 20)
-                        .padding(.horizontal, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 25)
-                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
-                        )
+
+                    //risk score (final)
+                    VStack (alignment: .leading, spacing:15) {
+
                     }
-                    
-                    VStack(alignment: .center, spacing: 10) {
-                        Text("User Info")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.black)
-                        
-                        if isLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else if let userData = userData {
-                            VStack(alignment: .center, spacing: 12) {
-                                // Email display
-                                Text("User: \(userData.email)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                
-                                // Skin tone
-                                Circle()
-                                    .fill(getSkinToneColor(for: userData.skinToneIndex))
-                                    .frame(width: 50, height: 50)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.black, lineWidth: 2)
-                                    )
-                                
-                                // User info 
-                                VStack(alignment: .center, spacing: 4) {
-                                    Text("Age: \(userData.age)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    
-                                    Text("Skin Tone: \(userData.skinToneIndex)")
-                                        .font(.body)
-                                        .foregroundColor(.black)
-                                        .multilineTextAlignment(.center)
-                                    
-                                    if !userData.skinConditions.isEmpty {
-                                        Text("Conditions: \(userData.skinConditions)")
-                                            .font(.body)
-                                            .foregroundColor(.black)
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(2)
-                                    }
-                                }
-                            }
-                        } else {
-                            Text("No demographic data available")
-                                .font(.body)
-                                .foregroundColor(.gray)
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .padding(.horizontal, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 25)
-                            .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
-                    )
-                    
+
+                    // ai skin summary based on demographics, UV, risk score
                     VStack (alignment: .leading, spacing: 15) {
                         HStack {
                             Text("🤖 AI Skin Summary")
@@ -207,7 +97,7 @@ struct ContentView: View {
                                 .background(Color.red.opacity(0.1))
                                 .cornerRadius(6)
                         }
-                        
+                        //default message
                         if aiSummary.isEmpty && !isLoadingSummary && summaryError.isEmpty {
                             Text("Get personalized skin care tips and UV protection advice based on your profile. Tap 'Generate' to create your AI-powered summary!")
                                 .font(.body)
@@ -224,7 +114,7 @@ struct ContentView: View {
                             }
                             .frame(maxHeight: 200)
                         }
-                        
+                        //loading message
                         if isLoadingSummary {
                             HStack {
                                 ProgressView()
@@ -243,6 +133,129 @@ struct ContentView: View {
                         RoundedRectangle(cornerRadius: 25)
                             .fill(Color(red: 200/255, green: 240/255, blue: 200/255))
                     )
+
+                        //load in the UV intensity from the firebase sensor data
+                        VStack (alignment: .center, spacing: 10) {
+                            Text("Current UV Intensity")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .multilineTextAlignment(.center)
+                            
+                            if isLoadingUV {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else if let uvIntensity = uvIntensity {
+                                Text("\(uvIntensity)")
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(uvIntensity >= 10 ? .red : .black)
+                            } else {
+                                Text("--")
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                        .padding(.vertical, 20)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 25)
+                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                        )
+                        
+                        //last time sunscreen was applied from the button sensor data
+                        VStack (alignment: .center, spacing: 10) {
+                            Text("Last Applied")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.black)
+                                .multilineTextAlignment(.center)
+                            
+                            if let lastAppliedDate = lastAppliedDate {
+                                Text(formatDate(lastAppliedDate))
+                                    .font(.body)
+                                    .foregroundColor(.black)
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                Text("Never")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                        .padding(.vertical, 20)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 25)
+                                .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                        )
+                    }
+                    
+                    //user demographics like skin tone , disease, age, email
+                    VStack(alignment: .center, spacing: 10) {
+                        Text("User Info")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.black)
+                        
+                        if isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else if let userData = userData {
+                            VStack(alignment: .center, spacing: 12) {
+                                Text("User: \(userData.email)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                
+                                //skin tone
+                                Circle()
+                                    .fill(getSkinToneColor(for: userData.skinToneIndex))
+                                    .frame(width: 50, height: 50)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.black, lineWidth: 2)
+                                    )
+                                
+                                // User info
+                                VStack(alignment: .center, spacing: 4) {
+                                    Text("Age: \(userData.age)")
+                                        .font(.body)
+                                        .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                    
+                                    Text("Skin Tone: \(userData.skinToneIndex)")
+                                        .font(.body)
+                                        .foregroundColor(.black)
+                                        .multilineTextAlignment(.center)
+                                    //conditions
+                                    if !userData.skinConditions.isEmpty {
+                                        Text("Conditions: \(userData.skinConditions)")
+                                            .font(.body)
+                                            .foregroundColor(.black)
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text("No demographic data available")
+                                .font(.body)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color(red: 235/255, green: 205/255, blue: 170/255))
+                    )
+                    
                     
                 }
                 .padding(.horizontal, 20)
@@ -261,6 +274,7 @@ struct ContentView: View {
         }
     }
     
+    //fetch data like skin color, user data, sensor data
     private func getSkinToneColor(for index: Int) -> Color {
         guard index > 0 && index <= skinTones.count else {
             return Color.gray
@@ -359,6 +373,7 @@ struct ContentView: View {
         uvListener = nil
     }
     
+    //allow sending notifications & check
     private func requestNotificationPermissions() {
         print("Requesting notification permissions...")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
@@ -371,18 +386,15 @@ struct ContentView: View {
             }
         }
     }
-    
+    //sunscreen notifications
     private func checkForSunscreenNotification(uvIntensity: Int) {
-        // Check if UV intensity is 10 or higher
         if uvIntensity >= 10 {
-            // Only send notification if we haven't already notified for this level
             if lastNotifiedUVLevel != uvIntensity {
                 print("🌞 High UV intensity detected: \(uvIntensity). Sending sunscreen notification.")
                 lastNotifiedUVLevel = uvIntensity
                 sendSunscreenNotification(uvIntensity: uvIntensity)
             }
         } else {
-            // Reset the notified level when UV goes below 10
             if lastNotifiedUVLevel != nil {
                 print("UV intensity dropped below 10. Resetting notification state.")
                 lastNotifiedUVLevel = nil
@@ -399,10 +411,8 @@ struct ContentView: View {
         content.sound = .default
         content.badge = 1
         
-        // Create immediate notification trigger
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         
-        // Create unique identifier for this notification
         let identifier = "sunscreen_reminder_\(uvIntensity)_\(Date().timeIntervalSince1970)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         
@@ -465,6 +475,7 @@ struct ContentView: View {
         }
     }
     
+    //date format
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -490,7 +501,7 @@ struct ContentView: View {
         
         Task {
             do {
-                // Get severity score from Firebase if available, otherwise calculate it
+                // severity score from Firebase, otherwise calculate it
                 let severityScore: Int
                 if let uid = authManager.user?.uid {
                     if let firebaseData = try? await FirestoreManager.shared.getUserData(uid: uid),
@@ -498,15 +509,13 @@ struct ContentView: View {
                         severityScore = storedSeverity
                         print("📊 Using stored severity score: \(severityScore)")
                     } else {
-                        // Calculate severity if not stored
                         severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: userData.skinConditions)
                         print("🔍 Calculated severity score: \(severityScore)")
                     }
                 } else {
-                    severityScore = 1 // Default fallback
+                    severityScore = 1
                 }
                 
-                // Generate personalized summary
                 let summary = try await geminiService.generateUserSummary(
                     age: userData.age,
                     skinConditions: userData.skinConditions,

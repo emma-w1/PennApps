@@ -12,6 +12,7 @@ import Foundation
 import FirebaseFirestore
 import SwiftUI
 
+//user data swift data
 struct UserData {
     let email: String
     let age: String
@@ -19,6 +20,7 @@ struct UserData {
     let skinConditions: String
 }
 
+//manage firestore
 class FirestoreManager {
     static let shared = FirestoreManager()
     
@@ -222,7 +224,7 @@ class FirestoreManager {
                 let data = document.data()
                 print("FirestoreManager: Real-time public UV document data: \(data ?? [:])")
                 
-                // Try UV_raw field first, then fallback to other field names
+                // Try UV_raw field first, then  other field names
                 let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int ?? data?["intensity"] as? Int
                 print("FirestoreManager: Real-time UV intensity update from public collection: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
