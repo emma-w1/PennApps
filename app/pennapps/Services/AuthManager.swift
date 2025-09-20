@@ -18,8 +18,8 @@ class AuthManager: ObservableObject {
     @Published var isLoading = true
     @Published var isAnalyzingSkinConditions = false
     
-    // Gemini service for skin condition analysis
-    private let geminiService = GeminiService()
+    // Cerebras service for skin condition analysis
+    private let cerebrasService = CerebrasService()
     
     init() {
     //authentication changes
@@ -68,12 +68,12 @@ class AuthManager: ObservableObject {
         isAnalyzingSkinConditions = true
         errorMessage = nil
         
-//gemini skin condition analysis
+//cerebras skin condition analysis
         Task {
             do {
-                // Step 1: Analyze skin conditions with Gemini
-                let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
-                print("✅ Gemini Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
+                // Step 1: Analyze skin conditions with Cerebras
+                let severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: skinConditions)
+                print("✅ Cerebras Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
                 
                 await MainActor.run {
                     self.isAnalyzingSkinConditions = false
@@ -90,8 +90,8 @@ class AuthManager: ObservableObject {
             } catch {
                 await MainActor.run {
                     self.isAnalyzingSkinConditions = false
-                    print("⚠️ Gemini analysis failed: \(error.localizedDescription)")
-                    // Continue with default severity score of 1 if Gemini fails
+                    print("⚠️ Cerebras analysis failed: \(error.localizedDescription)")
+                    // Continue with default severity score of 1 if Cerebras fails
                     self.createFirebaseUser(
                         email: email,
                         password: password,
@@ -121,7 +121,7 @@ class AuthManager: ObservableObject {
                     print("Attempting to save user data - Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(skinConditions)")
                     print("Saving user data with severity score: \(severityScore)")
                     if !age.isEmpty || skinToneIndex > 0 || !skinConditions.isEmpty {
-                        print("Calling FirestoreManager to save data with Gemini analysis...")
+                        print("Calling FirestoreManager to save data with Cerebras analysis...")
                         FirestoreManager.shared.saveUserInfo(
                             uid: uid,
                             email: email,

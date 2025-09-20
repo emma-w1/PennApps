@@ -1,23 +1,23 @@
 import SwiftUI
 
-struct GeminiTestView: View {
-    @StateObject private var geminiService = GeminiService()
+struct CerebrasTestView: View {
+    @StateObject private var cerebrasService = CerebrasService()
     @State private var testResults: [String] = []
     @State private var isLoading = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                Text("Gemini API Test")
+                Text("Cerebras API Test")
                     .font(.title)
                     .fontWeight(.bold)
                 
                 if isLoading {
-                    ProgressView("Testing Gemini API...")
+                    ProgressView("Testing Cerebras API...")
                         .padding()
                 }
                 
-                Button("Run Gemini Tests") {
+                Button("Run Cerebras Tests") {
                     runTests()
                 }
                 .buttonStyle(.borderedProminent)
@@ -30,7 +30,7 @@ struct GeminiTestView: View {
                 }
             }
             .padding()
-            .navigationTitle("Gemini Test")
+            .navigationTitle("Cerebras Test")
         }
     }
     
@@ -63,7 +63,7 @@ struct GeminiTestView: View {
         
         for testCase in testCases {
             do {
-                let severity = try await geminiService.analyzeSkinConditionSeverity(conditions: testCase)
+                let severity = try await cerebrasService.analyzeSkinConditionSeverity(conditions: testCase)
                 await MainActor.run {
                     testResults.append("✅ '\(testCase)' → Severity: \(severity)")
                 }
@@ -82,18 +82,18 @@ struct GeminiTestView: View {
         
         let testCases = [
             (age: 22, conditions: ["acne"]),
-            (age: 35, conditions: ["none"]),
+            (age: 35, conditions: []),
             (age: 45, conditions: ["eczema", "rosacea"])
         ]
         
         for testCase in testCases {
             do {
-                let summary = try await geminiService.generateUserSummary(
+                let summary = try await cerebrasService.generateUserSummary(
                     age: testCase.age,
                     skinConditions: testCase.conditions
                 )
                 await MainActor.run {
-                    testResults.append("✅ Age \(testCase.age), \(testCase.conditions.joined(separator: ", "))")
+                    testResults.append("✅ Age \(testCase.age), \(testCase.conditions.isEmpty ? "No conditions" : testCase.conditions.joined(separator: ", "))")
                     testResults.append("   Summary: \(summary.prefix(100))...")
                 }
             } catch {
@@ -106,5 +106,5 @@ struct GeminiTestView: View {
 }
 
 #Preview {
-    GeminiTestView()
+    CerebrasTestView()
 }

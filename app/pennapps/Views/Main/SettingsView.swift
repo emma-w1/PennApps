@@ -224,14 +224,14 @@ struct SettingsView: View {
         
         print("SettingsView: Saving settings - Age: \(age), Skin Tone: \(selectedSkinToneIndex), Conditions: \(skinConditions)")
         
-        // Use Gemini to analyze skin conditions and get severity score
+        // Use Cerebras to analyze skin conditions and get severity score
         Task {
             do {
-                let geminiService = GeminiService()
-                let severityScore = try await geminiService.analyzeSkinConditionSeverity(conditions: skinConditions)
+                let cerebrasService = CerebrasService()
+                let severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: skinConditions)
                 
                 await MainActor.run {
-                    // Save to Firebase with Gemini analysis
+                    // Save to Firebase with Cerebras analysis
                     FirestoreManager.shared.saveUserInfo(
                         uid: uid,
                         email: email,

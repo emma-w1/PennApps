@@ -10,7 +10,7 @@ struct UserSummaryView: View {
     @State private var userConditions = ""
     @State private var severityScore = 0
     
-    private let geminiService = GeminiService()
+    private let cerebrasService = CerebrasService()
     private let firestoreManager = FirestoreManager.shared
     
     var body: some View {
@@ -155,12 +155,10 @@ struct UserSummaryView: View {
         
         Task {
             do {
-                let generatedSummary = try await geminiService.generateUserSummary(
-                    age: userAge,
-                    skinConditions: userConditions,
-                    severityScore: severityScore,
-                    riskScoreBaseline: nil,
-                    skinToneIndex: 3
+                let skinConditionsArray = userConditions.isEmpty ? [] : [userConditions]
+                let generatedSummary = try await cerebrasService.generateUserSummary(
+                    age: Int(userAge) ?? 25,
+                    skinConditions: skinConditionsArray
                 )
                 
                 await MainActor.run {
