@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5665CD412E7E608E00B76881 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 5665CD402E7E608E00B76881 /* FirebaseAuth */; };
+		5665CD432E7E608E00B76881 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 5665CD422E7E608E00B76881 /* FirebaseCore */; };
+		5665CD472E7E822100B76881 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 5665CD462E7E822100B76881 /* FirebaseDatabase */; };
+		5665CD492E7E822100B76881 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 5665CD482E7E822100B76881 /* FirebaseFirestore */; };
+		5665CD4B2E7E822100B76881 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 5665CD4A2E7E822100B76881 /* FirebaseFirestoreCombine-Community */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		5665CCF92E7E353E00B76881 /* pennapps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pennapps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +31,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5665CD472E7E822100B76881 /* FirebaseDatabase in Frameworks */,
+				5665CD492E7E822100B76881 /* FirebaseFirestore in Frameworks */,
+				5665CD432E7E608E00B76881 /* FirebaseCore in Frameworks */,
+				5665CD4B2E7E822100B76881 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				5665CD412E7E608E00B76881 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +78,11 @@
 			);
 			name = pennapps;
 			packageProductDependencies = (
+				5665CD402E7E608E00B76881 /* FirebaseAuth */,
+				5665CD422E7E608E00B76881 /* FirebaseCore */,
+				5665CD462E7E822100B76881 /* FirebaseDatabase */,
+				5665CD482E7E822100B76881 /* FirebaseFirestore */,
+				5665CD4A2E7E822100B76881 /* FirebaseFirestoreCombine-Community */,
 			);
 			productName = pennapps;
 			productReference = 5665CCF92E7E353E00B76881 /* pennapps.app */;
@@ -94,6 +112,9 @@
 			);
 			mainGroup = 5665CCF02E7E353E00B76881;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5665CCFA2E7E353E00B76881 /* Products */;
 			projectDirPath = "";
@@ -324,6 +345,45 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.3.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5665CD402E7E608E00B76881 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		5665CD422E7E608E00B76881 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		5665CD462E7E822100B76881 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		5665CD482E7E822100B76881 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		5665CD4A2E7E822100B76881 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5665CD3F2E7E608E00B76881 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5665CCF12E7E353E00B76881 /* Project object */;
 }
