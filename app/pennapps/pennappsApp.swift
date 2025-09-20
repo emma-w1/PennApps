@@ -14,7 +14,35 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         FirebaseApp.configure()
         print("Firebase configured successfully")
+        
+        // Test Gemini integration on app launch
+        Task {
+            await testGeminiQuickly()
+        }
+        
         return true
+    }
+    
+    /// Quick test of Gemini integration
+    private func testGeminiQuickly() async {
+        print("🧪 Testing Gemini Integration...")
+        
+        let config = Config.shared
+        print(config.getConfigurationStatus())
+        
+        let gemini = GeminiService()
+        
+        // Test a few quick cases
+        let testCases = ["none", "acne"]
+        
+        for testCase in testCases {
+            do {
+                let result = try await gemini.analyzeSkinConditionSeverity(conditions: testCase)
+                print("✅ Test: '\(testCase)' → Severity: \(result)")
+            } catch {
+                print("❌ Test failed for '\(testCase)': \(error)")
+            }
+        }
     }
 }
 
