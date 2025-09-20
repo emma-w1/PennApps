@@ -6,13 +6,15 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var userData: UserData?
     @State private var isLoading = true
-    @State private var uvIndex: Int?
+    @State private var uvIntensity: Int?
     @State private var isLoadingUV = true
+    @State private var uvListener: ListenerRegistration?
     
     let skinTones: [Color] = [
         Color(red: 244/255, green: 208/255, blue: 177/255),
@@ -34,7 +36,7 @@ struct ContentView: View {
                 VStack(spacing: 20){
                     HStack(spacing: 16) {
                         VStack (alignment: .center, spacing: 10) {
-                            Text("Current UV Index")
+                            Text("Current UV Intensity")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.black)
@@ -43,8 +45,8 @@ struct ContentView: View {
                             if isLoadingUV {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                            } else if let uvIndex = uvIndex {
-                                Text("\(uvIndex)")
+                            } else if let uvIntensity = uvIntensity {
+                                Text("\(uvIntensity)")
                                     .font(.largeTitle)
                                     .fontWeight(.bold)
                                     .foregroundColor(.black)
@@ -166,7 +168,10 @@ struct ContentView: View {
         }
         .onAppear {
             fetchUserData()
-            fetchUVIndex()
+            startUVIntensityListener()
+        }
+        .onDisappear {
+            stopUVIntensityListener()
         }
     }
     
@@ -200,20 +205,26 @@ struct ContentView: View {
         }
     }
     
-    private func fetchUVIndex() {
-        print("Fetching UV index from latest document...")
+    private func startUVIntensityListener() {
+        print("Starting UV intensity real-time listener...")
         
-        FirestoreManager.shared.fetchLatestUVIndex { uvIndex in
+        uvListener = FirestoreManager.shared.listenToUVIntensityChanges { uvIntensity in
             DispatchQueue.main.async {
-                self.uvIndex = uvIndex
+                self.uvIntensity = uvIntensity
                 self.isLoadingUV = false
-                if let uvIndex = uvIndex {
-                    print("Successfully fetched UV index: \(uvIndex)")
+                if let uvIntensity = uvIntensity {
+                    print("Real-time UV intensity update: \(uvIntensity)")
                 } else {
-                    print("Failed to fetch UV index or no data available")
+                    print("UV intensity data unavailable")
                 }
             }
         }
+    }
+    
+    private func stopUVIntensityListener() {
+        print("Stopping UV intensity listener...")
+        uvListener?.remove()
+        uvListener = nil
     }
 }
 
