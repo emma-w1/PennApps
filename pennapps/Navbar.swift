@@ -10,35 +10,29 @@ import SwiftUI
 struct Navbar: View {
     var body: some View {
         TabView {
-            HStack{
-                NavigationLink (destination: ContentView()) {
-                    VStack{
-                        Image(systemName: "house.fill")
-                        Text("Home").font(.caption)
-                    }
-                    .frame(maxWidth: .infinity)
+            ContentView()
+                .tabItem {
+                    Image(systemName: "house.fill")
+                    Text("Home")
                 }
+                .tag(0)
+            
+            History()
+                .tabItem {
+                    Image(systemName: "clock.fill")
+                    Text("History")
+                }
+                .tag(1)
+            
                 
-                NavigationLink (destination: History()) {
-                    VStack {
-                        Image(systemName: "clock.fill")
-                        Text("History").font(.caption)
-                    }
-                    .frame(maxWidth: .infinity)
+            SettingsView()
+                .tabItem {
+                    Image(systemName: "gearshape.fill")
+                    Text("Settings")
                 }
-                
-                NavigationLink(destination: SettingsView()) {
-                    VStack {
-                        Image(systemName: "gearshape.fill")
-                        Text("Settings").font(.caption)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.vertical, 10)
-            .background(Color.yellow)
-            .foregroundStyle(.white)
+                .tag(2)
         }
+        .accentColor(Color(red: 122/255, green: 92/255, blue: 0)) 
     }
 }
 

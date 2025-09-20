@@ -10,10 +10,13 @@ import SwiftUI
 struct LoginView: View {
     var body: some View {
         NavigationStack {
-            Text("LOGIN SCREEN")
-            Spacer()
-            Navbar()
-                .frame(maxWidth: .infinity)
+            VStack {
+                Spacer()
+                Text("LOGIN SCREEN")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                Spacer()
+            }
         }
         .background(Color(red: 255/255, green: 247/255, blue: 217/255))
     }

@@ -10,9 +10,13 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         NavigationStack {
-            Spacer()
-            Navbar()
-                .frame(maxWidth: .infinity)
+            VStack {
+                Spacer()
+                Text("HOME SCREEN")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                Spacer()
+            }
         }
         .background(Color(red: 255/255, green: 247/255, blue: 217/255))
     }
