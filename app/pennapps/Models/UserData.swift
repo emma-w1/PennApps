@@ -13,7 +13,10 @@ struct UserData {
     let age: String
     let skinToneIndex: Int
     let skinConditions: String
-    let riskScoreBaseline: Int?
+    let baselineRiskScore: Double?
+    let baselineRiskCategory: String?
+    let finalRiskScore: Double?
+    let finalRiskCategory: String?
 }
 
 /// Represents UV risk levels based on skin condition severity

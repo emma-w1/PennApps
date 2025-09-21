@@ -247,9 +247,9 @@ struct SettingsView: View {
                     self.isSaving = false
                     
                     // Hide success message after 3 seconds
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: {
                         self.showSuccessMessage = false
-                    }
+                    })
                 }
             } catch {
                 await MainActor.run {
@@ -268,9 +268,9 @@ struct SettingsView: View {
                     self.showSuccessMessage = true
                     self.isSaving = false
                     
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: {
                         self.showSuccessMessage = false
-                    }
+                    })
                 }
             }
         }

@@ -1,227 +1,142 @@
+//
+//  CerebrasService.swift
+//  pennapps
+//
+//  Created by Adishree Das on 9/20/25.
+//
+
 import Foundation
+
+class CerebrasService: ObservableObject {
+    private let apiKey: String?
+    private let config = Config.shared
+    
+    init() {
+        self.apiKey = config.getCerebrasAPIKey()
+        print("🤖 Cerebras Service initialized - Key available: \(config.hasCerebrasKey())")
+    }
+    
+    func analyzeSkinConditionSeverity(conditions: String) async throws -> Int {
+        let cleanedConditions = conditions.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        // Handle empty or "none" cases immediately
+        if cleanedConditions.isEmpty {
+            print("✅ No skin conditions provided - returning severity 0")
+            return 0
+        }
+        
+        // Check for common "none" variations
+        let noneVariations = ["none", "n/a", "na", "no", "nothing", "normal", "normal skin", "no conditions", "none specified", "not applicable"]
+        
+        for variation in noneVariations {
+            if cleanedConditions == variation || cleanedConditions.contains(variation) {
+                print("✅ User indicated no skin conditions ('\(conditions)') - returning severity 0")
+                return 0
+            }
+        }
+        
+        // Check if API key is properly configured
+        guard let apiKey = apiKey else {
+            print("⚠️ Cerebras API key not configured. Using default severity score of 1.")
+            print("💡 Please set CEREBRAS_API_KEY in your .env file")
+            return 1 // Default severity for testing
+        }
+        
+        guard config.hasCerebrasKey() else {
+            print("⚠️ Cerebras API key appears to be a placeholder. Using default severity score of 1.")
+            return 1
+        }
+        
+        // For now, return a simple fallback analysis
+        // This can be replaced with actual Cerebras API calls when ready
+        return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
+    }
+    
+    func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
+        // Check if API key is properly configured
+        guard let apiKey = apiKey else {
+            print("⚠️ Cerebras API key not configured. Using fallback summary.")
+            return generateFallbackSummary(age: age, skinConditions: skinConditions)
+        }
+        
+        guard config.hasCerebrasKey() else {
+            print("⚠️ Cerebras API key appears to be a placeholder. Using fallback summary.")
+            return generateFallbackSummary(age: age, skinConditions: skinConditions)
+        }
+        
+        // For now, return a fallback summary
+        // This can be replaced with actual Cerebras API calls when ready
+        return generateFallbackSummary(age: age, skinConditions: skinConditions)
+    }
+    
+    private func fallbackAnalyzeSkinConditionSeverity(conditions: String) -> Int {
+        let cleanedConditions = conditions.lowercased()
+        
+        // Simple rule-based analysis
+        if cleanedConditions.contains("lupus") || cleanedConditions.contains("photosensitive") {
+            return 5
+        } else if cleanedConditions.contains("melasma") || cleanedConditions.contains("vitiligo") {
+            return 4
+        } else if cleanedConditions.contains("rosacea") || cleanedConditions.contains("psoriasis") {
+            return 3
+        } else if cleanedConditions.contains("eczema") || cleanedConditions.contains("dermatitis") {
+            return 2
+        } else if cleanedConditions.contains("acne") || cleanedConditions.contains("sensitive") {
+            return 1
+        } else {
+            return 0
+        }
+    }
+    
+    private func generateFallbackSummary(age: Int, skinConditions: [String]) -> String {
+        let conditionsText = skinConditions.isEmpty ? "no significant skin conditions" : skinConditions.joined(separator: ", ")
+        
+        let ageImpact: String
+        if age < 18 {
+            ageImpact = "young age contributes to lower risk"
+        } else if age < 30 {
+            ageImpact = "age contributes moderately to risk"
+        } else if age < 50 {
+            ageImpact = "age increases baseline risk"
+        } else {
+            ageImpact = "age significantly increases risk"
+        }
+        
+        let recommendations: String
+        if skinConditions.contains(where: { $0.lowercased().contains("lupus") }) {
+            recommendations = "Maximum protection required: SPF 50+, protective clothing, wide-brim hat, sunglasses, and minimize sun exposure."
+        } else if skinConditions.contains(where: { $0.lowercased().contains("melasma") }) {
+            recommendations = "Use SPF 50+, protective clothing, wide-brim hat, and avoid peak sun hours."
+        } else if skinConditions.contains(where: { $0.lowercased().contains("rosacea") }) {
+            recommendations = "Use SPF 30-50, protective clothing, and limit sun exposure."
+        } else {
+            recommendations = "Use SPF 30+ broad-spectrum sunscreen and seek shade during peak hours."
+        }
+        
+        return """
+        Your skin profile shows you have \(conditionsText) at age \(age). These factors affect your risk through \(ageImpact).
+        
+        Advice: \(recommendations) Reapply every 2 hours and seek shade during peak UV hours (10 AM - 4 PM). 🌞
+        """
+    }
+}
 
 enum CerebrasError: Error {
     case invalidURL
-    case noData
+    case apiError
+    case parseError
     case invalidResponse
-    case noAPIKey
-    case requestFailed(String)
     
     var localizedDescription: String {
         switch self {
         case .invalidURL:
-            return "Invalid URL"
-        case .noData:
-            return "No data received"
+            return "Invalid API URL"
+        case .apiError:
+            return "API request failed"
+        case .parseError:
+            return "Failed to parse response"
         case .invalidResponse:
-            return "Invalid response format"
-        case .noAPIKey:
-            return "API key not found"
-        case .requestFailed(let message):
-            return "Request failed: \(message)"
-        }
-    }
-}
-
-class CerebrasService: ObservableObject {
-    private let baseURL = "https://api.cerebras.ai/v1/chat/completions"
-    private var apiKey: String? {
-        return Config.shared.getCerebrasAPIKey()
-    }
-    
-    init() {}
-    
-    func analyzeSkinConditionSeverity(conditions: String) async throws -> Int {
-        guard let apiKey = apiKey else {
-            print("⚠️ No Cerebras API key found, using fallback")
-            return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
-        }
-        
-        guard let url = URL(string: baseURL) else {
-            throw CerebrasError.invalidURL
-        }
-        
-        let prompt = """
-        Analyze the following skin conditions and provide a UV risk severity score from 0-5:
-        - 0: No risk (normal skin)
-        - 1: Very low risk
-        - 2: Low risk  
-        - 3: Medium risk
-        - 4: High risk
-        - 5: Very high risk (requires immediate protection)
-        
-        Skin conditions: \(conditions)
-        
-        Return only the number (0-5), no explanation needed.
-        """
-        
-        let requestBody: [String: Any] = [
-            "model": "llama3.1-8b",
-            "messages": [
-                [
-                    "role": "user",
-                    "content": prompt
-                ]
-            ],
-            "max_tokens": 10,
-            "temperature": 0.1
-        ]
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        } catch {
-            throw CerebrasError.requestFailed("Failed to encode request: \(error)")
-        }
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Cerebras API Error (\(httpResponse.statusCode)): \(errorBody)")
-                return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
-            }
-            
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let firstChoice = choices.first,
-                  let message = firstChoice["message"] as? [String: Any],
-                  let content = message["content"] as? String else {
-                throw CerebrasError.invalidResponse
-            }
-            
-            let severityText = content.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let severity = Int(severityText), severity >= 0 && severity <= 5 {
-                print("✅ Cerebras analysis: '\(conditions)' → Severity: \(severity)")
-                return severity
-            } else {
-                print("⚠️ Invalid Cerebras response: '\(severityText)', using fallback")
-                return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
-            }
-            
-        } catch {
-            print("❌ Cerebras request failed: \(error), using fallback")
-            return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
-        }
-    }
-    
-    private func fallbackAnalyzeSkinConditionSeverity(conditions: String) -> Int {
-        let lowerConditions = conditions.lowercased()
-        
-        if lowerConditions.contains("none") || lowerConditions.isEmpty {
-            return 0
-        } else if lowerConditions.contains("acne") || lowerConditions.contains("blackhead") {
-            return 2
-        } else if lowerConditions.contains("eczema") || lowerConditions.contains("dermatitis") {
-            return 3
-        } else if lowerConditions.contains("psoriasis") || lowerConditions.contains("rosacea") {
-            return 4
-        } else if lowerConditions.contains("melanoma") || lowerConditions.contains("cancer") {
-            return 5
-        } else {
-            return 1 // Default for unknown conditions
-        }
-    }
-    
-    func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
-        guard let apiKey = apiKey else {
-            print("⚠️ No Cerebras API key found, using fallback")
-            return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
-        }
-        
-        guard let url = URL(string: baseURL) else {
-            throw CerebrasError.invalidURL
-        }
-        
-        let conditionsString = skinConditions.joined(separator: ", ")
-        let prompt = """
-        Generate a personalized skincare summary for a user with the following profile:
-        - Age: \(age)
-        - Skin Conditions: \(conditionsString.isEmpty ? "None" : conditionsString)
-        
-        Provide a brief, friendly summary (2-3 sentences) with:
-        1. General skin health assessment
-        2. Key recommendations for their age and conditions
-        3. UV protection advice based on their profile
-        
-        Keep it encouraging and practical.
-        """
-        
-        let requestBody: [String: Any] = [
-            "model": "llama3.1-8b",
-            "messages": [
-                [
-                    "role": "user",
-                    "content": prompt
-                ]
-            ],
-            "max_tokens": 200,
-            "temperature": 0.7
-        ]
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-        } catch {
-            throw CerebrasError.requestFailed("Failed to encode request: \(error)")
-        }
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Cerebras API Error (\(httpResponse.statusCode)): \(errorBody)")
-                return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
-            }
-            
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let firstChoice = choices.first,
-                  let message = firstChoice["message"] as? [String: Any],
-                  let content = message["content"] as? String else {
-                throw CerebrasError.invalidResponse
-            }
-            
-            print("✅ Cerebras summary generated successfully")
-            return content.trimmingCharacters(in: .whitespacesAndNewlines)
-            
-        } catch {
-            print("❌ Cerebras request failed: \(error), using fallback")
-            return fallbackGenerateUserSummary(age: age, skinConditions: skinConditions)
-        }
-    }
-    
-    private func fallbackGenerateUserSummary(age: Int, skinConditions: [String]) -> String {
-        let hasConditions = !skinConditions.isEmpty && skinConditions != ["none"]
-        
-        if age < 25 {
-            if hasConditions {
-                return "Your young skin is resilient! Focus on gentle cleansing and consistent moisturizing to manage your current skin concerns. Don't forget daily SPF 30+ to protect against future damage."
-            } else {
-                return "Your skin looks great! At your age, prevention is key. Stick to a simple routine with gentle cleanser, moisturizer, and daily SPF 30+ to maintain healthy skin for years to come."
-            }
-        } else if age < 40 {
-            if hasConditions {
-                return "Your skin is entering its prime years. Address your current concerns with targeted treatments while maintaining a consistent routine. SPF 30+ daily is crucial for preventing further issues."
-            } else {
-                return "Your skin is in good shape! Focus on maintaining hydration and protection. A consistent routine with antioxidants and daily SPF 30+ will help preserve your skin's health."
-            }
-        } else {
-            if hasConditions {
-                return "Mature skin requires extra care and attention. Focus on hydrating, nourishing treatments for your specific concerns. Daily SPF 30+ and gentle, effective products are your best allies."
-            } else {
-                return "Your skin looks wonderful! Maintain its health with rich moisturizers, gentle treatments, and consistent SPF 30+ protection. Your good habits are clearly paying off."
-            }
+            return "Invalid severity score received"
         }
     }
 }

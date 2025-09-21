@@ -79,7 +79,11 @@ struct UserInfoCard: View {
             email: "test@example.com",
             age: "25",
             skinToneIndex: 3,
-            skinConditions: "Sensitive skin"
+            skinConditions: "Sensitive skin",
+            baselineRiskScore: 1.2,
+            baselineRiskCategory: "Medium",
+            finalRiskScore: 1.5,
+            finalRiskCategory: "High"
         ),
         isLoading: false
     )
