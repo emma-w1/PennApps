@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Comprehensive configuration manager for app settings and API keys
 /// makes sensitive .env file available to app parts

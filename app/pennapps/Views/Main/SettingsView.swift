@@ -253,7 +253,7 @@ struct SettingsView: View {
                 }
             } catch {
                 await MainActor.run {
-                    print("SettingsView: Gemini analysis failed: \(error.localizedDescription)")
+                    print("SettingsView: Cerebras analysis failed: \(error.localizedDescription)")
                     // Still save to Firebase with default severity score
                     FirestoreManager.shared.saveUserInfo(
                         uid: uid,

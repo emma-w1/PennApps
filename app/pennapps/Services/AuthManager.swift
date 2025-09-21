@@ -53,7 +53,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-//    sign up with Gemini skin condition analysis
+//    sign up with Cerebras skin condition analysis
     func signUp(email: String, password: String, age: String = "", skinTone: Color = .clear, skinConditions: String = "", skinToneIndex: Int = 0) {
         guard !email.isEmpty && !password.isEmpty else {
             errorMessage = "Please enter both email and password"

@@ -92,8 +92,8 @@ class FirestoreManager {
             "updatedAt": FieldValue.serverTimestamp()
         ]
         
-        //prints specific gemini value for skin conditoin severity
-        print("FirestoreManager: Attempting to write to Firestore with Gemini data and risk scores...")
+        //prints specific cerebras value for skin condition severity
+        print("FirestoreManager: Attempting to write to Firestore with Cerebras data and risk scores...")
         print("FirestoreManager: Baseline Risk Score: \(baselineRiskScore), Category: \(baselineRiskCategory)")
         print("FirestoreManager: Final Risk Score: \(finalRiskScore), Category: \(finalRiskCategory)")
         
