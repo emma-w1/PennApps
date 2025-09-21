@@ -15,3 +15,4 @@ struct HistoryEntry: Identifiable {
     let uv: Int
     let timestamp: Date
 }
+
