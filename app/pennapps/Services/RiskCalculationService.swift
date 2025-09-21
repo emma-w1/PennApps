@@ -13,10 +13,10 @@ class RiskCalculationService {
     private init() {}
     
     // Fitzpatrick phototype reference values (REF)
-    private let phototypeRefValues: [Double] = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]
+    let phototypeRefValues: [Double] = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]
     
     // Age modifiers
-    private func getAgeModifier(age: Int) -> Double {
+    func getAgeModifier(age: Int) -> Double {
         switch age {
         case 0..<20:
             return 0.8
@@ -32,7 +32,7 @@ class RiskCalculationService {
     }
     
     // Condition modifiers based on severity score
-    private func getConditionModifier(severityScore: Int) -> Double {
+    func getConditionModifier(severityScore: Int) -> Double {
         switch severityScore {
         case 0: return 1.0
         case 1: return 1.1
@@ -44,18 +44,36 @@ class RiskCalculationService {
         }
     }
     
-    // Risk category classification
-    private func classifyRiskCategory(riskScore: Double) -> String {
+    // Risk category classification for baseline risk (without skin conditions)
+    func classifyBaselineRiskCategory(riskScore: Double) -> String {
         switch riskScore {
-        case 0.1...0.3:
+        case 0...0.58:
             return "Very Low"
-        case 0.31...0.6:
+        case 0.59...1.16:
             return "Low"
-        case 0.61...1.0:
+        case 1.17...1.75:
             return "Medium"
-        case 1.01...1.5:
+        case 1.76...2.34:
             return "High"
-        case _ where riskScore > 1.5:
+        case _ where riskScore > 2.35:
+            return "Very High"
+        default:
+            return "Unknown"
+        }
+    }
+    
+    // Risk category classification for final risk (with skin conditions)
+    func classifyFinalRiskCategory(riskScore: Double) -> String {
+        switch riskScore {
+        case 0...1.15:
+            return "Very Low"
+        case 1.16...2.30:
+            return "Low"
+        case 2.31...3.45:
+            return "Medium"
+        case 3.46...4.60:
+            return "High"
+        case _ where riskScore > 4.61:
             return "Very High"
         default:
             return "Unknown"
@@ -71,7 +89,7 @@ class RiskCalculationService {
         
         // Baseline calculation: REF * Age Modifier (no condition modifier)
         let baselineRiskScore = ref * ageModifier
-        let baselineRiskCategory = classifyRiskCategory(riskScore: baselineRiskScore)
+        let baselineRiskCategory = classifyBaselineRiskCategory(riskScore: baselineRiskScore)
         
         return [
             "baseline_risk_score": baselineRiskScore,
@@ -93,7 +111,7 @@ class RiskCalculationService {
         
         // Final calculation: REF * Age Modifier * Condition Modifier
         let finalRiskScore = ref * ageModifier * conditionModifier
-        let finalRiskCategory = classifyRiskCategory(riskScore: finalRiskScore)
+        let finalRiskCategory = classifyFinalRiskCategory(riskScore: finalRiskScore)
         
         return [
             "final_risk_score": finalRiskScore,

@@ -12,7 +12,7 @@ class Config {
         loadEnvironmentVariables()
     }
     
-    /// Load environment variables from .env file
+    /// Load environment variables from .xenv file
     private func loadEnvironmentVariables() {
         guard let envPath = Bundle.main.path(forResource: ".env", ofType: nil) else {
             print("⚠️ .env file not found in bundle")
