@@ -19,7 +19,6 @@ struct ContentView: View {
     @State private var uvIntensity: Int?
     @State private var isLoadingUV = true
     @State private var uvListener: ListenerRegistration?
-    @State private var userDocListener: ListenerRegistration?
     @State private var lastNotifiedUVLevel: Int? = nil
     @State private var lastAppliedDate: Date?
     @State private var lastIsPressedState: Bool = false
@@ -75,12 +74,6 @@ struct ContentView: View {
                             if isLoadingUV {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                            } else if let dynamicRisk = dynamicRiskCategory {
-                                Text(dynamicRisk)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(dynamicRisk.lowercased().contains("high") ? .red : 
-                                                   dynamicRisk.lowercased().contains("medium") ? .orange : .green)
                             } else if let riskScoreBaseline = riskScoreBaseline {
                                 Text(riskScoreBaseline)
                                     .font(.title2)
@@ -318,12 +311,10 @@ struct ContentView: View {
             fetchUserData()
             fetchLastAppliedDate()
             startUVIntensityListener()
-            startUserDocumentListener()
             requestNotificationPermissions()
         }
         .onDisappear {
             stopUVIntensityListener()
-            stopUserDocumentListener()
         }
     }
     
@@ -401,9 +392,6 @@ struct ContentView: View {
                     if let uvIntensity = uvIntensity {
                         print("ContentView: Setting UV intensity to: \(uvIntensity)")
                         self.checkForSunscreenNotification(uvIntensity: uvIntensity)
-                        
-                        // When UV intensity changes, fetch the updated risk category
-                        self.fetchUpdatedRiskCategory()
                     } else {
                         print("ContentView: UV intensity is nil, showing --")
                     }
@@ -440,50 +428,6 @@ struct ContentView: View {
                 }
             }
         )
-    }
-    
-    private func startUserDocumentListener() {
-        guard let uid = authManager.user?.uid else {
-            print("ContentView: No user UID available for user document listener")
-            return
-        }
-        
-        print("Starting user document listener for risk category...")
-        
-        userDocListener = FirestoreManager.shared.listenToUserDocumentChanges(
-            uid: uid,
-            riskCategoryCompletion: { riskCategory in
-                DispatchQueue.main.async {
-                    print("ContentView: Received risk category update from user doc: \(riskCategory ?? "nil")")
-                    self.dynamicRiskCategory = riskCategory
-                }
-            }
-        )
-    }
-    
-    private func stopUserDocumentListener() {
-        print("Stopping user document listener...")
-        userDocListener?.remove()
-    }
-    
-    private func fetchUpdatedRiskCategory() {
-        guard let uid = authManager.user?.uid else {
-            print("ContentView: No user UID available for fetching risk category")
-            return
-        }
-        
-        print("ContentView: Fetching updated risk category due to UV change...")
-        
-        FirestoreManager.shared.fetchRiskCategory(uid: uid) { riskCategory in
-            DispatchQueue.main.async {
-                if let riskCategory = riskCategory {
-                    print("ContentView: Updated risk category from UV change: \(riskCategory)")
-                    self.dynamicRiskCategory = riskCategory
-                } else {
-                    print("ContentView: No risk category available")
-                }
-            }
-        }
     }
     
     private func stopUVIntensityListener() {

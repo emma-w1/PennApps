@@ -46,10 +46,14 @@ class FirestoreManager {
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
                     skinConditions: data?["skinConditions"] as? String ?? "",
+<<<<<<< HEAD:app/pennapps/Services/FirestoreManager.swift
                     baselineRiskScore: data?["baseline_risk_score"] as? Double,
                     baselineRiskCategory: data?["baseline_risk_category"] as? String,
                     finalRiskScore: data?["final_risk_score"] as? Double,
                     finalRiskCategory: data?["final_risk_category"] as? String
+=======
+                    riskScoreBaseline: data?["riskScoreBaseline"] as? String
+>>>>>>> parent of 84b99b6 (working content):app/pennapps/FirestoreManager.swift
                 )
                 completion(userData)
             } else {
@@ -111,7 +115,7 @@ class FirestoreManager {
         print("FirestoreManager: Saving risk score baseline: \(riskScore) for UID: \(uid)")
         
         let data: [String: Any] = [
-            "baseline_risk_category": riskScore,
+            "riskScoreBaseline": riskScore,
             "riskScoreUpdatedAt": FieldValue.serverTimestamp()
         ]
         
@@ -244,55 +248,6 @@ class FirestoreManager {
                 print("Latest document no longer exists")
                 uvCompletion(nil)
                 isPressedCompletion(false, nil)
-            }
-        }
-    }
-    
-    func listenToUserDocumentChanges(uid: String, riskCategoryCompletion: @escaping (String?) -> Void) -> ListenerRegistration {
-        print("FirestoreManager: Setting up real-time listener for user document: \(uid)")
-        
-        return db.collection("users").document(uid).addSnapshotListener { documentSnapshot, error in
-            if let error = error {
-                print("Error listening to user document: \(error.localizedDescription)")
-                riskCategoryCompletion(nil)
-            } else if let document = documentSnapshot, document.exists {
-                let data = document.data()
-                print("FirestoreManager: User document data keys: \(data?.keys.sorted() ?? [])")
-                
-                // Extract final_risk_category if it exists
-                if let finalRiskCategory = data?["final_risk_category"] as? String {
-                    print("FirestoreManager: final_risk_category from user doc: \(finalRiskCategory)")
-                    riskCategoryCompletion(finalRiskCategory)
-                } else {
-                    print("FirestoreManager: No final_risk_category found in user document")
-                    riskCategoryCompletion(nil)
-                }
-            } else {
-                print("User document no longer exists")
-                riskCategoryCompletion(nil)
-            }
-        }
-    }
-    
-    func fetchRiskCategory(uid: String, completion: @escaping (String?) -> Void) {
-        print("FirestoreManager: Fetching risk category for user: \(uid)")
-        
-        db.collection("users").document(uid).getDocument { documentSnapshot, error in
-            if let error = error {
-                print("FirestoreManager: Error fetching risk category: \(error.localizedDescription)")
-                completion(nil)
-            } else if let document = documentSnapshot, document.exists {
-                let data = document.data()
-                if let finalRiskCategory = data?["final_risk_category"] as? String {
-                    print("FirestoreManager: Fetched risk category: \(finalRiskCategory)")
-                    completion(finalRiskCategory)
-                } else {
-                    print("FirestoreManager: No final_risk_category found in user document")
-                    completion(nil)
-                }
-            } else {
-                print("FirestoreManager: User document no longer exists")
-                completion(nil)
             }
         }
     }
