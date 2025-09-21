@@ -18,11 +18,11 @@ class AuthManager: ObservableObject {
     @Published var isLoading = true
     @Published var isAnalyzingSkinConditions = false
     
-    // Cerebras service for skin condition analysis
+    // cerebras for skin condition analysis
     private let cerebrasService = CerebrasService()
     
     init() {
-    //authentication changes
+    //auth changes
         Auth.auth().addStateDidChangeListener { [weak self] auth, user in
             DispatchQueue.main.async {
                 print("Auth state changed - User: \(user?.email ?? "nil")")
@@ -53,7 +53,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-//    sign up with Gemini skin condition analysis
+//    sign up with ai skin condition analysis
     func signUp(email: String, password: String, age: String = "", skinTone: Color = .clear, skinConditions: String = "", skinToneIndex: Int = 0) {
         guard !email.isEmpty && !password.isEmpty else {
             errorMessage = "Please enter both email and password"
@@ -71,7 +71,7 @@ class AuthManager: ObservableObject {
 //cerebras skin condition analysis
         Task {
             do {
-                // Step 1: Analyze skin conditions with Cerebras
+                // analyze skin conditions with Cerebras
                 let severityScore = try await cerebrasService.analyzeSkinConditionSeverity(conditions: skinConditions)
                 print("✅ Cerebras Analysis Complete: '\(skinConditions)' → Severity: \(severityScore)")
                 
@@ -91,7 +91,7 @@ class AuthManager: ObservableObject {
                 await MainActor.run {
                     self.isAnalyzingSkinConditions = false
                     print("⚠️ Cerebras analysis failed: \(error.localizedDescription)")
-                    // Continue with default severity score of 1 if Cerebras fails
+                    // default severity 1
                     self.createFirebaseUser(
                         email: email,
                         password: password,
@@ -106,7 +106,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // create a new firebase user w/ specified score
+    // new firebase user w/ specified score
     private func createFirebaseUser(email: String, password: String, age: String, skinTone: Color, skinConditions: String, skinToneIndex: Int, severityScore: Int) {
         
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in

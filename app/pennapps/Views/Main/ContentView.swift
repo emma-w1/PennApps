@@ -403,21 +403,24 @@ struct ContentView: View {
                     print("ContentView: Previous is_pressed state: \(self.lastIsPressedState)")
                     print("ContentView: About to check if isPressed is true...")
                     
-                    // Always update the date when is_pressed is true
-                    if isPressed {
-                        print("ContentView: ✅ isPressed is TRUE! Executing update logic...")
+                    // Only save to history when state changes from false to true
+                    if isPressed && !self.lastIsPressedState {
+                        print("ContentView: ✅ State changed from false to true! Saving to history...")
                         // Use provided date or current date if none provided
                         let dateToUse = date ?? Date()
-                        print("ContentView: is_pressed is true, updating last applied date to: \(dateToUse)")
-                        self.lastAppliedDate = dateToUse
+                        print("ContentView: Saving history entry for date: \(dateToUse)")
                         self.saveLastAppliedDateToFirebase(date: dateToUse)
                         
-                        // Send notification only when state changes from false to true
-                        if !self.lastIsPressedState {
-                            print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
-                            print("ContentView: Sending sunscreen applied notification...")
-                            self.sendSunscreenAppliedNotification()
-                        }
+                        print("🎉 SUNSCREEN APPLIED! State changed from false to true!")
+                        print("ContentView: Sending sunscreen applied notification...")
+                        self.sendSunscreenAppliedNotification()
+                    } else if isPressed {
+                        print("ContentView: is_pressed is true but no state change - not saving to history")
+                        // Still update the display date for the widget
+                        let dateToUse = date ?? Date()
+                        self.lastAppliedDate = dateToUse
+                        // Update widget system but NOT history collection
+                        FirestoreManager.shared.saveLastAppliedDate(date: dateToUse)
                     } else {
                         print("ContentView: is_pressed is false")
                     }
@@ -548,7 +551,12 @@ struct ContentView: View {
     
     private func saveLastAppliedDateToFirebase(date: Date) {
         print("Saving last applied date to Firebase latest document: \(date)")
+        
+        // Save to widget system (existing functionality)
         FirestoreManager.shared.saveLastAppliedDate(date: date)
+        
+        // Save to history collection (new functionality)
+        FirestoreManager.shared.saveHistoryEntry(date: date, uvIntensity: uvIntensity ?? 0)
     }
     private func generateAISummary() {
         guard let userData = userData else {

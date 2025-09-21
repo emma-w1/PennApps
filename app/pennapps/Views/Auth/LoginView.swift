@@ -27,11 +27,24 @@ struct LoginView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 30) {
-                    // Header
-                    VStack(alignment: .center, spacing: 10) {
-                        Image("Soliss")
+            VStack(spacing: 30) {
+                // Header
+                VStack(spacing: 10) {
+                    Image("Soliss")
+                    
+                    Text(isSignUpMode ? "Create Account" : "Welcome Back")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 50)
+                
+                // Form
+                VStack(spacing: 20) {
+                    // Email
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Email")
+                            .font(.headline)
+                            .foregroundColor(.black)
                         
                         Text(isSignUpMode ? "Create Account" : "Welcome Back")
                             .font(.title2)

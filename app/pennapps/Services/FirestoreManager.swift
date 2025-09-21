@@ -17,6 +17,7 @@ class FirestoreManager {
     
     private let db = Firestore.firestore()
     
+    //initialize firestore
     init() {
         print("FirestoreManager initialized")
     }
@@ -64,16 +65,16 @@ class FirestoreManager {
         print("FirestoreManager: Starting to save user data for UID: \(uid)")
         print("FirestoreManager: Email: \(email), Age: \(age), SkinTone Index: \(skinToneIndex), Conditions: \(conditions)")
         
-        // Calculate risk scores using Python service
+        // calculate risk scores
         let riskService = RiskCalculationService.shared
         let ageInt = Int(age) ?? 0
         
-        // Calculate baseline risk score (without skin conditions)
+        // baseline risk score calc
         let baselineResult = riskService.calculateBaselineRiskScore(skinToneIndex: skinToneIndex, age: ageInt)
         let baselineRiskScore = baselineResult["baseline_risk_score"] as? Double ?? 0.0
         let baselineRiskCategory = baselineResult["baseline_risk_category"] as? String ?? "Unknown"
         
-        // Calculate final risk score (with skin conditions)
+        // final risk score calc
         let finalResult = riskService.calculateFinalRiskScore(skinToneIndex: skinToneIndex, age: ageInt, severityScore: severityScore)
         let finalRiskScore = finalResult["final_risk_score"] as? Double ?? 0.0
         let finalRiskCategory = finalResult["final_risk_category"] as? String ?? "Unknown"
@@ -92,8 +93,8 @@ class FirestoreManager {
             "updatedAt": FieldValue.serverTimestamp()
         ]
         
-        //prints specific gemini value for skin conditoin severity
-        print("FirestoreManager: Attempting to write to Firestore with Gemini data and risk scores...")
+        //prints specific value for skin conditoin severity
+        print("FirestoreManager: Attempting to write to Firestore with Cerebras data and risk scores...")
         print("FirestoreManager: Baseline Risk Score: \(baselineRiskScore), Category: \(baselineRiskCategory)")
         print("FirestoreManager: Final Risk Score: \(finalRiskScore), Category: \(finalRiskCategory)")
         
@@ -124,7 +125,7 @@ class FirestoreManager {
         }
     }
     
-
+//fetch user data
     func getUserData(uid: String) async throws -> [String: Any]? {
         print("FirestoreManager: Fetching user data for UID: \(uid)")
         
@@ -144,7 +145,7 @@ class FirestoreManager {
             throw error
         }
     }
-    
+    //fetch sensor data
     func fetchLatestUVIndex(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Fetching latest UV index...")
         
@@ -167,7 +168,6 @@ class FirestoreManager {
             }
         }
     }
-    
     private func fetchFromPublicUVCollection(completion: @escaping (Int?) -> Void) {
         print("FirestoreManager: Trying public UV data collection...")
         
@@ -190,6 +190,7 @@ class FirestoreManager {
         }
     }
     
+    //see changes in firebase ui value
     func listenToUVIntensityChanges(completion: @escaping (Int?) -> Void) -> ListenerRegistration {
         print("FirestoreManager: Setting up real-time listener for UV intensity...")
         
@@ -197,13 +198,11 @@ class FirestoreManager {
         let listener = db.collection("users").document("latest").addSnapshotListener { documentSnapshot, error in
             if let error = error {
                 print("Error listening to users/latest: \(error.localizedDescription)")
-                // Fallback: try listening to public collection
                 let _ = self.setupPublicUVListener(completion: completion)
             } else if let document = documentSnapshot, document.exists {
                 let data = document.data()
                 print("FirestoreManager: Real-time document data: \(data ?? [:])")
                 
-                // Try UV_raw field first, then fallback to uv_index
                 let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
                 print("FirestoreManager: Real-time UV intensity update from users/latest: \(uvIntensity ?? -1)")
                 completion(uvIntensity)
@@ -216,6 +215,7 @@ class FirestoreManager {
         return listener
     }
     
+    //see changes in firebase any data
     func listenToLatestDocumentChanges(uvCompletion: @escaping (Int?) -> Void, isPressedCompletion: @escaping (Bool, Date?) -> Void) -> ListenerRegistration {
         print("FirestoreManager: Setting up real-time listener for latest document...")
         
@@ -228,12 +228,12 @@ class FirestoreManager {
                 let data = document.data()
                 print("FirestoreManager: Latest document data: \(data ?? [:])")
                 
-                // Extract UV intensity
+                //  UV intensity
                 let uvIntensity = data?["UV_raw"] as? Int ?? data?["uv_raw"] as? Int ?? data?["uv_index"] as? Int
                 print("FirestoreManager: UV intensity: \(uvIntensity ?? -1)")
                 uvCompletion(uvIntensity)
                 
-                // Extract is_pressed and timestamp
+                //  is_pressed and timestamp each time button is pressed and sunscreen is applied
                 let isPressed = data?["is_pressed"] as? Bool ?? false
                 let timestamp = data?["timestamp"] as? Timestamp
                 let date = timestamp?.dateValue()
@@ -248,6 +248,7 @@ class FirestoreManager {
         }
     }
     
+    //original uv listener function
     private func setupPublicUVListener(completion: @escaping (Int?) -> Void) -> ListenerRegistration {
         print("FirestoreManager: Setting up public UV data listener...")
         
@@ -270,8 +271,7 @@ class FirestoreManager {
         }
     }
     
-    // MARK: - Last Applied Date Management
-    
+//save all dates of values (needed for history page)    
     func saveLastAppliedDate(date: Date) {
         print("FirestoreManager: Saving last applied date to users/latest document")
         
@@ -289,7 +289,7 @@ class FirestoreManager {
             }
         }
     }
-    
+//fetch dates  
     func fetchLastAppliedDate(completion: @escaping (Date?) -> Void) {
         print("FirestoreManager: Fetching last applied date from users/latest document")
         
@@ -300,7 +300,6 @@ class FirestoreManager {
             } else if let document = document, document.exists {
                 let data = document.data()
                 
-                // Try to get the date from Timestamp first, then fallback to timestamp
                 if let timestamp = data?["lastAppliedDate"] as? Timestamp {
                     let date = timestamp.dateValue()
                     print("FirestoreManager: Retrieved last applied date from Timestamp: \(date)")
@@ -318,6 +317,71 @@ class FirestoreManager {
                 completion(nil)
             }
         }
+    }
+    
+    // save history entry to firebase collection
+    func saveHistoryEntry(date: Date, uvIntensity: Int) {
+        print("Saving history entry: Date=\(date), UV=\(uvIntensity)")
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: date)
+        
+        // create unique document ID as timestamp
+        let documentId = String(Int(date.timeIntervalSince1970))
+        
+        let historyData: [String: Any] = [
+            "date": dateString,
+            "time": timeString,
+            "uv": uvIntensity,
+            "timestamp": date,
+            "fullDate": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("history").document(documentId).setData(historyData) { error in
+            if let error = error {
+                print("Error saving history entry: \(error.localizedDescription)")
+            } else {
+                print("✅ History entry saved successfully")
+            }
+        }
+    }
+    
+    // fetch history entries from firebase to display
+    func fetchHistoryEntries(completion: @escaping ([HistoryEntry]) -> Void) {
+        print("Fetching history entries...")
+        
+        db.collection("history")
+            .order(by: "timestamp", descending: true)
+            .getDocuments { querySnapshot, error in
+                if let error = error {
+                    print("Error fetching history entries: \(error.localizedDescription)")
+                    completion([])
+                } else {
+                    var historyEntries: [HistoryEntry] = []
+                    
+                    for document in querySnapshot?.documents ?? [] {
+                        let data = document.data()
+                        
+                        let entry = HistoryEntry(
+                            id: document.documentID,
+                            date: data["date"] as? String ?? "",
+                            time: data["time"] as? String ?? "",
+                            uv: data["uv"] as? Int ?? 0,
+                            timestamp: data["timestamp"] as? Date ?? Date()
+                        )
+                        
+                        historyEntries.append(entry)
+                    }
+                    
+                    print("✅ Fetched \(historyEntries.count) history entries")
+                    completion(historyEntries)
+                }
+            }
     }
     
 }
