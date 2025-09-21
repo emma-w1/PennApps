@@ -27,148 +27,143 @@ struct LoginView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                // Header
-                VStack(spacing: 10) {
-                    Text("Soliss")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.yellow)
-                    
-                    Text(isSignUpMode ? "Create Account" : "Welcome Back")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 50)
-                
-                // Form
-                VStack(spacing: 20) {
-                    // Email
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Email")
-                            .font(.headline)
-                            .foregroundColor(.black)
+            ScrollView {
+                VStack(spacing: 30) {
+                    // Header
+                    VStack(alignment: .center, spacing: 10) {
+                        Image("Soliss")
                         
-                        TextField("Enter your email", text: $email)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
+                        Text(isSignUpMode ? "Create Account" : "Welcome Back")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
                     }
                     
-                    // Password
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Password")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                        
-                        SecureField("Enter your password", text: $password)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    
-                    // Sign up specific fields
-                    if isSignUpMode {
-                        // Age
+                    // Form Container - centered with fixed width
+                    VStack(spacing: 20) {
+                        // Email
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("Age")
+                            Text("Email")
                                 .font(.headline)
                                 .foregroundColor(.black)
                             
-                            TextField("Enter your age", text: $age)
+                            TextField("Enter your email", text: $email)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .keyboardType(.numberPad)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
                         }
                         
-                        // Skin Tone Selection
+                        // Password
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("Skin Tone")
+                            Text("Password")
                                 .font(.headline)
                                 .foregroundColor(.black)
                             
-                            Text("Select your skin tone:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            HStack(spacing: 12) {
-                                ForEach(Array(skinTones.enumerated()), id: \.offset) { index, tone in
-                                    Circle()
-                                        .fill(tone)
-                                        .frame(width: 35, height: 35)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(selectedSkinToneIndex == index + 1 ? Color.yellow : Color.clear, lineWidth: 3)
-                                        )
-                                        .onTapGesture {
-                                            selectedSkinToneIndex = index + 1
-                                        }
-                                }
-                            }
-                            .frame(maxWidth: 300, alignment: .leading)
-                        }
-                        
-                        // Skin Conditions
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Skin Conditions")
-                                .font(.headline)
-                                .foregroundColor(.black)
-                            
-                            TextField("e.g., acne, eczema, sensitive skin (or \"none\" if no conditions)", text: $skinConditions, axis: .vertical)
+                            SecureField("Enter your password", text: $password)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .lineLimit(3...6)
                         }
-                    }
-                }
-                .padding(.horizontal, 40)
-                
-                // Error message
-                if let errorMessage = authManager.errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .padding(.horizontal, 40)
-                }
-                
-                // Action buttons
-                VStack(spacing: 15) {
-                    // Main action button
-                    Button(action: {
+                        
+                        // Sign up specific fields
                         if isSignUpMode {
-                            signUp()
-                        } else {
-                            signIn()
-                        }
-                    }) {
-                        HStack {
-                            if authManager.isAnalyzingSkinConditions {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            // Age
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Age")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                
+                                TextField("Enter your age", text: $age)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .keyboardType(.numberPad)
                             }
-                            Text(isSignUpMode ? 
-                                 (authManager.isAnalyzingSkinConditions ? "Analyzing..." : "Sign Up") : 
-                                 "Sign In")
+                            
+                            // Skin Tone Selection
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Skin Tone")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                
+                                Text("Select your skin tone:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 12) {
+                                    ForEach(Array(skinTones.enumerated()), id: \.offset) { index, tone in
+                                        Circle()
+                                            .fill(tone)
+                                            .frame(width: 35, height: 35)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(selectedSkinToneIndex == index + 1 ? Color.yellow : Color.clear, lineWidth: 3)
+                                            )
+                                            .onTapGesture {
+                                                selectedSkinToneIndex = index + 1
+                                            }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            
+                            // Skin Conditions
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Skin Conditions")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                
+                                TextField("e.g., acne, eczema, sensitive skin (or \"none\" if no conditions)", text: $skinConditions, axis: .vertical)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .lineLimit(3...6)
+                            }
                         }
-                        .frame(maxWidth: 300)
-                        .padding()
-                        .background(Color(red: 235/255, green: 205/255, blue: 170/255))
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                        .font(.headline)
                     }
-                    .disabled(email.isEmpty || password.isEmpty || authManager.isAnalyzingSkinConditions)
+                    .frame(maxWidth: 350)
                     
-                    // Toggle mode button
-                    Button(action: {
-                        isSignUpMode.toggle()
-                        authManager.errorMessage = nil
-                    }) {
-                        Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                            .foregroundColor(.blue)
+                    // Error message
+                    if let errorMessage = authManager.errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
                             .font(.caption)
                     }
+                    
+                    // Action buttons
+                    VStack(spacing: 15) {
+                        // Main action button
+                        Button(action: {
+                            if isSignUpMode {
+                                signUp()
+                            } else {
+                                signIn()
+                            }
+                        }) {
+                            HStack {
+                                if authManager.isAnalyzingSkinConditions {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                }
+                                Text(isSignUpMode ? 
+                                     (authManager.isAnalyzingSkinConditions ? "Analyzing..." : "Sign Up") : 
+                                     "Sign In")
+                            }
+                            .frame(maxWidth: 350)
+                            .padding()
+                            .background(Color(red: 235/255, green: 205/255, blue: 170/255))
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                            .font(.headline)
+                        }
+                        .disabled(email.isEmpty || password.isEmpty || authManager.isAnalyzingSkinConditions)
+                        
+                        // Toggle mode button
+                        Button(action: {
+                            isSignUpMode.toggle()
+                            authManager.errorMessage = nil
+                        }) {
+                            Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                                .foregroundColor(.blue)
+                                .font(.caption)
+                        }
+                    }
                 }
-                .padding(.horizontal, 40)
-                
-                Spacer()
+                .frame(maxWidth: .infinity)
             }
         }
         .background(Color(red: 255/255, green: 247/255, blue: 217/255).ignoresSafeArea())

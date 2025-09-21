@@ -52,21 +52,21 @@ class CerebrasService: ObservableObject {
         return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
     }
     
-    func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
+    func generateUserSummary(age: Int, skinConditions: [String], baselineRiskScore: Double? = nil, baselineRiskCategory: String? = nil) async throws -> String {
         // Check if API key is properly configured
         guard let apiKey = apiKey else {
             print("⚠️ Cerebras API key not configured. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions)
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
         }
         
         guard config.hasCerebrasKey() else {
             print("⚠️ Cerebras API key appears to be a placeholder. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions)
+            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
         }
         
         // For now, return a fallback summary
         // This can be replaced with actual Cerebras API calls when ready
-        return generateFallbackSummary(age: age, skinConditions: skinConditions)
+        return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
     }
     
     private func fallbackAnalyzeSkinConditionSeverity(conditions: String) -> Int {
@@ -88,7 +88,17 @@ class CerebrasService: ObservableObject {
         }
     }
     
-    private func generateFallbackSummary(age: Int, skinConditions: [String]) -> String {
+    private func generateFallbackSummary(age: Int, skinConditions: [String], baselineRiskScore: Double? = nil, baselineRiskCategory: String? = nil) -> String {
+        // Start with baseline risk information
+        let baselineInfo: String
+        if let baselineRiskCategory = baselineRiskCategory, !baselineRiskCategory.isEmpty {
+            baselineInfo = "The baseline risk score is \(baselineRiskCategory).\n\n"
+        } else if let baselineRiskScore = baselineRiskScore {
+            baselineInfo = "The baseline risk score is \(String(format: "%.2f", baselineRiskScore)).\n\n"
+        } else {
+            baselineInfo = ""
+        }
+        
         let conditionsText = skinConditions.isEmpty ? "no significant skin conditions" : skinConditions.joined(separator: ", ")
         
         let ageImpact: String
@@ -114,7 +124,7 @@ class CerebrasService: ObservableObject {
         }
         
         return """
-        Your skin profile shows you have \(conditionsText) at age \(age). These factors affect your risk through \(ageImpact).
+        \(baselineInfo)Your skin profile shows you have \(conditionsText) at age \(age). These factors affect your risk through \(ageImpact).
         
         Advice: \(recommendations) Reapply every 2 hours and seek shade during peak UV hours (10 AM - 4 PM). 🌞
         """

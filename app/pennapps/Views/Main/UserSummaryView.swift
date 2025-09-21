@@ -9,6 +9,8 @@ struct UserSummaryView: View {
     @State private var userAge = ""
     @State private var userConditions = ""
     @State private var severityScore = 0
+    @State private var baselineRiskScore: Double? = nil
+    @State private var baselineRiskCategory: String? = nil
     
     private let cerebrasService = CerebrasService()
     private let firestoreManager = FirestoreManager.shared
@@ -127,8 +129,10 @@ struct UserSummaryView: View {
                         userAge = userData["age"] as? String ?? ""
                         userConditions = userData["skinConditions"] as? String ?? ""
                         severityScore = userData["conditionSeverity"] as? Int ?? 0
+                        baselineRiskScore = userData["baseline_risk_score"] as? Double
+                        baselineRiskCategory = userData["baseline_risk_category"] as? String
                         
-                        print("Loaded user data: Age=\(userAge), Conditions=\(userConditions), Severity=\(severityScore)")
+                        print("Loaded user data: Age=\(userAge), Conditions=\(userConditions), Severity=\(severityScore), Baseline=\(baselineRiskCategory ?? "Unknown")")
                     }
                 } else {
                     await MainActor.run {
@@ -158,7 +162,9 @@ struct UserSummaryView: View {
                 let skinConditionsArray = userConditions.isEmpty ? [] : [userConditions]
                 let generatedSummary = try await cerebrasService.generateUserSummary(
                     age: Int(userAge) ?? 25,
-                    skinConditions: skinConditionsArray
+                    skinConditions: skinConditionsArray,
+                    baselineRiskScore: baselineRiskScore,
+                    baselineRiskCategory: baselineRiskCategory
                 )
                 
                 await MainActor.run {

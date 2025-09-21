@@ -584,7 +584,9 @@ struct ContentView: View {
                 let skinConditionsArray = userData.skinConditions.isEmpty ? [] : [userData.skinConditions]
                 let summary = try await cerebrasService.generateUserSummary(
                     age: Int(userData.age) ?? 25,
-                    skinConditions: skinConditionsArray
+                    skinConditions: skinConditionsArray,
+                    baselineRiskScore: userData.baselineRiskScore,
+                    baselineRiskCategory: userData.baselineRiskCategory
                 )
                 
                 await MainActor.run {

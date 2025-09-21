@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var isSaving = false
     @State private var showSuccessMessage = false
     @FocusState private var isTextFieldFocused: Bool
+    @State private var isUVMonitoringActive = false
     
     // Editable fields
     @State private var age: String = ""
@@ -151,6 +152,50 @@ struct SettingsView: View {
                                 .font(.caption)
                         }
                         
+                        // UV Monitoring Status
+                        VStack(spacing: 10) {
+                            HStack {
+                                Text("UV Monitoring:")
+                                    .font(.headline)
+                                    .foregroundColor(.black)
+                                Spacer()
+                                Circle()
+                                    .fill(isUVMonitoringActive ? Color.green : Color.red)
+                                    .frame(width: 12, height: 12)
+                                Text(isUVMonitoringActive ? "Active" : "Inactive")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: 300)
+                            
+                            Button(action: {
+                                toggleUVMonitoring()
+                            }) {
+                                Text(isUVMonitoringActive ? "Stop UV Monitoring" : "Start UV Monitoring")
+                                    .frame(maxWidth: 300)
+                                    .padding()
+                                    .background(isUVMonitoringActive ? Color.red : Color.green)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
+                                    .font(.headline)
+                            }
+                            .disabled(isSaving)
+                        }
+                        
+                        // Update all users button (for debugging)
+                        Button(action: {
+                            updateAllUsersRiskCategories()
+                        }) {
+                            Text("Update All Users Risk Categories")
+                                .frame(maxWidth: 300)
+                                .padding()
+                                .background(Color(red: 0/255, green: 100/255, blue: 200/255))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .font(.headline)
+                        }
+                        .disabled(isSaving)
+                        
                         // Sign out button
                         Button(action: {
                             authManager.signOut()
@@ -253,7 +298,7 @@ struct SettingsView: View {
                 }
             } catch {
                 await MainActor.run {
-                    print("SettingsView: Gemini analysis failed: \(error.localizedDescription)")
+                    print("SettingsView: Cerebras analysis failed: \(error.localizedDescription)")
                     // Still save to Firebase with default severity score
                     FirestoreManager.shared.saveUserInfo(
                         uid: uid,
@@ -273,6 +318,38 @@ struct SettingsView: View {
                     })
                 }
             }
+        }
+    }
+    
+    private func updateAllUsersRiskCategories() {
+        print("🔄 Starting to update all users' risk categories...")
+        
+        UserUpdateService.shared.updateAllUsersRiskCategories { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Successfully updated all users: \(message)")
+                    // Show success message
+                    self.showSuccessMessage = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: {
+                        self.showSuccessMessage = false
+                    })
+                } else {
+                    print("❌ Failed to update users: \(message)")
+                    // You could show an error message here if needed
+                }
+            }
+        }
+    }
+    
+    private func toggleUVMonitoring() {
+        if isUVMonitoringActive {
+            UVMonitoringService.shared.stopUVMonitoring()
+            isUVMonitoringActive = false
+            print("⏹️ UV monitoring stopped")
+        } else {
+            UVMonitoringService.shared.startUVMonitoring()
+            isUVMonitoringActive = true
+            print("▶️ UV monitoring started")
         }
     }
 }

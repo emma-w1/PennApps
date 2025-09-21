@@ -29,6 +29,9 @@ struct MainAppView: View {
                 hasTestedCerebras = true
                 testCerebrasIntegration()
             }
+            
+            // Start UV monitoring service
+            UVMonitoringService.shared.startUVMonitoring()
         }
     }
     
