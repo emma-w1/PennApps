@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// User data model for storing profile information
+/// swift data for storing user profile
 struct UserData {
     let email: String
     let age: String
@@ -19,7 +19,7 @@ struct UserData {
     let finalRiskCategory: String?
 }
 
-/// Represents UV risk levels based on skin condition severity
+// uv risk scale & built in reccomendarations to ai
 enum UVRiskLevel: Int, CaseIterable {
     case none = 0
     case minimal = 1

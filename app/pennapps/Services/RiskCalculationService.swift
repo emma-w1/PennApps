@@ -12,10 +12,10 @@ class RiskCalculationService {
     
     private init() {}
     
-    // Fitzpatrick phototype reference values (REF)
+    // Fitzpatrick values for skin tones 
     private let phototypeRefValues: [Double] = [1.0, 0.8, 0.6, 0.4, 0.2, 0.1]
     
-    // Age modifiers
+    // age modifiers
     private func getAgeModifier(age: Int) -> Double {
         switch age {
         case 0..<20:

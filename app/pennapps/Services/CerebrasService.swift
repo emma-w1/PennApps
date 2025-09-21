@@ -7,6 +7,7 @@
 
 import Foundation
 
+//cerebras ai
 class CerebrasService: ObservableObject {
     private let apiKey: String?
     private let config = Config.shared
@@ -19,13 +20,13 @@ class CerebrasService: ObservableObject {
     func analyzeSkinConditionSeverity(conditions: String) async throws -> Int {
         let cleanedConditions = conditions.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         
-        // Handle empty or "none" cases immediately
+        // hand empty or "none" cases 
         if cleanedConditions.isEmpty {
             print("✅ No skin conditions provided - returning severity 0")
             return 0
         }
         
-        // Check for common "none" variations
+        // check for "none" variations
         let noneVariations = ["none", "n/a", "na", "no", "nothing", "normal", "normal skin", "no conditions", "none specified", "not applicable"]
         
         for variation in noneVariations {
@@ -35,11 +36,11 @@ class CerebrasService: ObservableObject {
             }
         }
         
-        // Check if API key is properly configured
+        // config api key?
         guard let apiKey = apiKey else {
             print("⚠️ Cerebras API key not configured. Using default severity score of 1.")
             print("💡 Please set CEREBRAS_API_KEY in your .env file")
-            return 1 // Default severity for testing
+            return 1
         }
         
         guard config.hasCerebrasKey() else {
@@ -47,13 +48,12 @@ class CerebrasService: ObservableObject {
             return 1
         }
         
-        // For now, return a simple fallback analysis
-        // This can be replaced with actual Cerebras API calls when ready
+        // fallback analysis if needed
         return fallbackAnalyzeSkinConditionSeverity(conditions: conditions)
     }
     
+    //user summary
     func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
-        // Check if API key is properly configured
         guard let apiKey = apiKey else {
             print("⚠️ Cerebras API key not configured. Using fallback summary.")
             return generateFallbackSummary(age: age, skinConditions: skinConditions)
@@ -64,15 +64,14 @@ class CerebrasService: ObservableObject {
             return generateFallbackSummary(age: age, skinConditions: skinConditions)
         }
         
-        // For now, return a fallback summary
-        // This can be replaced with actual Cerebras API calls when ready
+        // fallback summary
         return generateFallbackSummary(age: age, skinConditions: skinConditions)
     }
     
     private func fallbackAnalyzeSkinConditionSeverity(conditions: String) -> Int {
         let cleanedConditions = conditions.lowercased()
         
-        // Simple rule-based analysis
+        // rule-based analysis
         if cleanedConditions.contains("lupus") || cleanedConditions.contains("photosensitive") {
             return 5
         } else if cleanedConditions.contains("melasma") || cleanedConditions.contains("vitiligo") {
@@ -87,7 +86,6 @@ class CerebrasService: ObservableObject {
             return 0
         }
     }
-    
     private func generateFallbackSummary(age: Int, skinConditions: [String]) -> String {
         let conditionsText = skinConditions.isEmpty ? "no significant skin conditions" : skinConditions.joined(separator: ", ")
         
@@ -112,7 +110,7 @@ class CerebrasService: ObservableObject {
         } else {
             recommendations = "Use SPF 30+ broad-spectrum sunscreen and seek shade during peak hours."
         }
-        
+        //skin summary output
         return """
         Your skin profile shows you have \(conditionsText) at age \(age). These factors affect your risk through \(ageImpact).
         
@@ -121,6 +119,7 @@ class CerebrasService: ObservableObject {
     }
 }
 
+//handles errors from cerebras
 enum CerebrasError: Error {
     case invalidURL
     case apiError

@@ -30,10 +30,7 @@ struct LoginView: View {
             VStack(spacing: 30) {
                 // Header
                 VStack(spacing: 10) {
-                    Text("Soliss")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.yellow)
+                    Image("Soliss")
                     
                     Text(isSignUpMode ? "Create Account" : "Welcome Back")
                         .font(.title2)

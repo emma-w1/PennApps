@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Comprehensive configuration manager for app settings and API keys
+///  config manager for app settings and API keys
 /// makes sensitive .env file available to app parts
 class Config {
     static let shared = Config()
@@ -12,7 +12,7 @@ class Config {
         loadEnvironmentVariables()
     }
     
-    /// Load environment variables from .env file
+    /// load environment variables
     private func loadEnvironmentVariables() {
         guard let envPath = Bundle.main.path(forResource: ".env", ofType: nil) else {
             print("⚠️ .env file not found in bundle")
@@ -29,19 +29,18 @@ class Config {
         }
     }
     
-    /// Parse .env file content
+    /// parse .env file content
     private func parseEnvironmentContent(_ content: String) {
         let lines = content.components(separatedBy: .newlines)
         
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
-            // Skip empty lines and comments
             if trimmedLine.isEmpty || trimmedLine.hasPrefix("#") {
                 continue
             }
             
-            // Parse KEY=VALUE format
+            // parse KEY=VALUE format
             let components = trimmedLine.components(separatedBy: "=")
             if components.count >= 2 {
                 let key = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -53,7 +52,7 @@ class Config {
         print("✅ Loaded \(environment.count) environment variables from .env file")
     }
     
-    /// Fallback to process environment variables
+    /// process environment variables
     private func loadFromProcessEnvironment() {
         environment["CEREBRAS_API_KEY"] = ProcessInfo.processInfo.environment["CEREBRAS_API_KEY"]
         
@@ -61,11 +60,10 @@ class Config {
     }
     
     
-    /// Securely get API key with validation
+    ///  get API key
     private func getAPIKey(_ key: String) -> String? {
         let value = environment[key]
         
-        // Validate that it's not a placeholder
         if let value = value,
            !value.isEmpty,
            !value.contains("your_") && !value.contains("_here") {
@@ -75,17 +73,17 @@ class Config {
         return nil
     }
         
-    /// Get Cerebras API Key
+    /// get Cerebras API Key
     var cerebrasAPIKey: String? {
         return getAPIKey("CEREBRAS_API_KEY")
     }
     
-    /// Check if Cerebras key is properly configured
+    /// config Cerebras key 
     var hasValidCerebrasKey: Bool {
         return cerebrasAPIKey != nil
     }
         
-    /// Initialize app configurations
+    /// init app config
     func initializeApp() {
         print("🚀 Initializing app configuration...")
         print(getConfigurationStatus())
