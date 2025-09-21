@@ -17,6 +17,8 @@ struct History: View {
     var body: some View {
         NavigationStack {
             VStack {
+                Topbar()
+                    .padding(.top, 0)
                 // Header
                 Text("HISTORY")
                     .font(.largeTitle)
