@@ -158,7 +158,7 @@ struct SettingsView: View {
                             Text("Sign Out")
                                 .frame(maxWidth: 300)
                                 .padding()
-                                .background(Color(red: 139/255, green: 0/255, blue: 0/255))
+                                .background(Color(red: 160/255, green: 82/255, blue: 45/255))
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                                 .font(.headline)
