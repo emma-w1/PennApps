@@ -46,14 +46,10 @@ class FirestoreManager {
                     age: data?["age"] as? String ?? "",
                     skinToneIndex: data?["skinToneIndex"] as? Int ?? 0,
                     skinConditions: data?["skinConditions"] as? String ?? "",
-<<<<<<< HEAD:app/pennapps/Services/FirestoreManager.swift
                     baselineRiskScore: data?["baseline_risk_score"] as? Double,
                     baselineRiskCategory: data?["baseline_risk_category"] as? String,
                     finalRiskScore: data?["final_risk_score"] as? Double,
                     finalRiskCategory: data?["final_risk_category"] as? String
-=======
-                    riskScoreBaseline: data?["riskScoreBaseline"] as? String
->>>>>>> parent of 84b99b6 (working content):app/pennapps/FirestoreManager.swift
                 )
                 completion(userData)
             } else {

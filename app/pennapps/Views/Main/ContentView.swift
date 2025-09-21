@@ -349,7 +349,7 @@ struct ContentView: View {
                 if let userData = data {
                     print("Successfully fetched user data for: \(userData.email)")
                     print("User data - Age: \(userData.age), Skin Tone: \(userData.skinToneIndex), Conditions: \(userData.skinConditions)")
-                    if let riskScore = userData.riskScoreBaseline {
+                    if let riskScore = userData.baselineRiskCategory {
                         print("Risk Score Baseline: \(riskScore)")
                     } else {
                         print("No risk score baseline found")
@@ -358,7 +358,7 @@ struct ContentView: View {
                     print("Failed to fetch user data for UID: \(uid)")
                 }
                 self.userData = data
-                self.riskScoreBaseline = data?.riskScoreBaseline
+                self.riskScoreBaseline = data?.baselineRiskCategory
                 self.isLoading = false
             }
         }
