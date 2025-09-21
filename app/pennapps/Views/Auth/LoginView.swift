@@ -31,24 +31,18 @@ struct LoginView: View {
                 // Header
                 VStack() {
                     Image("Soliss")
-                    
-                    Text(isSignUpMode ? "Create Account" : "Welcome Back")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
+                        .padding(.bottom, 0)
                 }
-                .padding(.top, 5)
-                
+                .padding(.bottom, 0)
+                ScrollView {
+
                 // Form
-                VStack(spacing: 20) {
-                    // Email
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Email")
-                            .font(.headline)
-                            .foregroundColor(.black)
-                    }
-                    
-                    // Form Container - centered with fixed width
                     VStack(spacing: 20) {
+                        Text(isSignUpMode ? "Create Account" : "Welcome Back")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                            .padding(.top,0)
+                        
                         // Email
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Email")
@@ -122,18 +116,18 @@ struct LoginView: View {
                                     .lineLimit(3...6)
                             }
                         }
-                    }
-                    .frame(maxWidth: 350)
-                    
-                    // Error message
-                    if let errorMessage = authManager.errorMessage {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
-                    
-                    // Action buttons
-                    VStack(spacing: 15) {
+                        }
+                        .frame(maxWidth: 350)
+                        
+                        // Error message
+                        if let errorMessage = authManager.errorMessage {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                        
+                        // Action buttons
+                        VStack(spacing: 15) {
                         // Main action button
                         Button(action: {
                             if isSignUpMode {
