@@ -27,16 +27,16 @@ struct LoginView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
+            VStack() {
                 // Header
-                VStack(spacing: 10) {
+                VStack() {
                     Image("Soliss")
                     
                     Text(isSignUpMode ? "Create Account" : "Welcome Back")
                         .font(.title2)
                         .foregroundColor(.secondary)
                 }
-                .padding(.top, 50)
+                .padding(.top, 5)
                 
                 // Form
                 VStack(spacing: 20) {
@@ -45,10 +45,6 @@ struct LoginView: View {
                         Text("Email")
                             .font(.headline)
                             .foregroundColor(.black)
-                        
-                        Text(isSignUpMode ? "Create Account" : "Welcome Back")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
                     }
                     
                     // Form Container - centered with fixed width

@@ -53,19 +53,19 @@ class CerebrasService: ObservableObject {
     }
     
     //user summary
-    func generateUserSummary(age: Int, skinConditions: [String]) async throws -> String {
-        guard let apiKey = apiKey else {
-            print("⚠️ Cerebras API key not configured. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
-        }
-        
-        guard config.hasCerebrasKey() else {
-            print("⚠️ Cerebras API key appears to be a placeholder. Using fallback summary.")
-            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
-        }
+    func generateUserSummary(age: Int, skinConditions: [String], baselineRiskScore: Double? = nil, baselineRiskCategory: String? = nil) async throws -> String {
+//        guard let apiKey = apiKey else {
+//            print("⚠️ Cerebras API key not configured. Using fallback summary.")
+//            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
+//        }
+//        
+//        guard config.hasCerebrasKey() else {
+//            print("⚠️ Cerebras API key appears to be a placeholder. Using fallback summary.")
+//            return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
+//        }
         
         // fallback summary
-        return generateFallbackSummary(age: age, skinConditions: skinConditions)
+        return generateFallbackSummary(age: age, skinConditions: skinConditions, baselineRiskScore: baselineRiskScore, baselineRiskCategory: baselineRiskCategory)
     }
     
     private func fallbackAnalyzeSkinConditionSeverity(conditions: String) -> Int {
