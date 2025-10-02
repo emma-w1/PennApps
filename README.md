@@ -1,4 +1,10 @@
 # Sollis 
+https://docs.google.com/presentation/d/1kRaQyKPKHA3sn7sRTVwOSdsWiQJeeMlTRAeg5QPmgUQ/edit?usp=sharing (see the hardware slide for specifics)
+
+![IMG_1729](https://github.com/user-attachments/assets/9387e392-cb59-408f-9fe3-b016843df017)
+![IMG_1762](https://github.com/user-attachments/assets/7fb1ea00-e989-4e8d-9cf9-fccb47788dfd)
+<img width="1920" height="1080" alt="Screenshot 2025-10-02 at 3 26 41 PM (2)" src="https://github.com/user-attachments/assets/f462e841-c07a-4627-ad78-d3d46481a791" />
+
 
 A wearable armband and iOS app that helps you track UV exposure in real time and receive personalized sun safety recommendations.
 
